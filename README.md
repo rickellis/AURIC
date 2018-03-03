@@ -10,7 +10,7 @@ The name AURIC is a play on two words: AUR and Rick. It's also the name of the m
 
     $  auric -d package-name  # Download a package
 
-    $  auric -i package-name  # Install a downloaded package
+    $  auric -i package-name  # Install a downloaded package from AUR
 
     $  auric -u package-name  # Update a specific package
     $  auric -u               # Update all packages
