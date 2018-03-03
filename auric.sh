@@ -11,8 +11,7 @@ VERSION="1.0.0"
 #-----------------------------------------------------------------------------------
 #
 # AURIC is mostly just vam with a pretty face, better error trapping, makepkg
-# support, pacman for non-AUR dependency installation, JSON parsing using either jq 
-# or jshon, and a few additional features
+# support, JSON parsing using either jq or jshon, and a few additional features
 #
 # The name AURIC is a play on two words: AUR and Rick. It also means gold.
 #-----------------------------------------------------------------------------------
@@ -22,29 +21,32 @@ VERSION="1.0.0"
 #-----------------------------------------------------------------------------------
 
 # Local AUR git repo
-AURDIR="$HOME/AUR"
+AURDIR="$HOME/.AUR"
 
 # AUR package search URL
 AURURL="https://aur.archlinux.org/rpc/?v=5&type=info&arg[]="
 
+# GIT URL for AUR repos. %s will be replaced with package name
+GITURL="https://aur.archlinux.org/%s.git"
+
 # Successful git pull result - no spaces or punctuation
-GIT_RESULT="alreadyuptodate"
+GITRES="alreadyuptodate"
 
 # Whether to resolve pacman dependencies during download.
 # Makepkg does this so its unlikely this will need to be true
-USE_PACMAN=false
+USEPAC=false
 
 # Will contain the list of all installed packages. 
 # This gets set automatically
-PACKAGES=""
+LOCALPKGS=""
 
 # Name of installed JSON parser. This gets set automatically.
-JSON_PARSER=""
+JSONPARSER=""
 
 # Array containg all successfully downloaded packages.
 # If this contains package names AURIC will prompt
 # user to install after downloading
-TO_INSTALL=()
+TOINSTALL=()
 
 # ----------------------------------------------------------------------------------
 
@@ -69,39 +71,38 @@ heading purple "AURIC VERSION ${VERSION}"
 
 # Help screen
 help() {
-    echo "HELP MENU"
     echo 
     echo "Download a package"
     echo
-    echo -e "   ${yel}\$${reset}   ${grn}auric -d${reset} ${cyn}package-name${reset}"
+    echo -e "   ${yel}\$${reset}   ${grn}auric${reset} ${yellow}-d${reset} ${cyn}package-name${reset}"
     echo
     echo "Install a downloaded package"
     echo
-    echo -e "   ${yel}\$${reset}   ${grn}auric -i${reset} ${cyn}package-name${reset}"
+    echo -e "   ${yel}\$${reset}   ${grn}auric${reset} ${yellow}-i${reset} ${cyn}package-name${reset}"
     echo
     echo "Update a package"
     echo
-    echo -e "   ${yel}\$${reset}   ${grn}auric -u${reset} ${cyn}package-name${reset}"
+    echo -e "   ${yel}\$${reset}   ${grn}auric${reset} ${yellow}-u${reset} ${cyn}package-name${reset}"
     echo
     echo "Update all installed packages"
     echo
-    echo -e "   ${yel}\$${reset}   ${grn}auric -u${reset}"
+    echo -e "   ${yel}\$${reset}   ${grn}auric${reset} ${yellow}-u${reset}"
     echo
     echo "Search for a package"
     echo
-    echo -e "   ${yel}\$${reset}   ${grn}auric -s${reset} ${cyn}package-name${reset}"
+    echo -e "   ${yel}\$${reset}   ${grn}auric${reset} ${yellow}-s${reset} ${cyn}package-name${reset}"
     echo
-    echo "Show all local packages in ${AURDIR}"
+    echo "Show all local packages in AURIC"
     echo
-    echo -e "   ${yel}\$${reset}   ${grn}auric -q${reset}"
+    echo -e "   ${yel}\$${reset}   ${grn}auric${reset} ${yellow}-q${reset}"
     echo
     echo "Remove a package"
     echo
-    echo -e "   ${yel}\$${reset}   ${grn}auric -r${reset} ${cyn}package-name${reset}"
+    echo -e "   ${yel}\$${reset}   ${grn}auric${reset} ${yellow}-r${reset} ${cyn}package-name${reset}"
     echo
-    echo "Migrate previously installed packages to ${AURDIR}"
+    echo "Migrate previously installed AUR packages to AURIC"
     echo
-    echo -e "   ${yel}\$${reset}   ${grn}auric -m${reset}"
+    echo -e "   ${yel}\$${reset}   ${grn}auric${reset} ${yellow}-m${reset}"
     echo
     exit 1
 }
@@ -115,7 +116,7 @@ validate_pkgname(){
         echo
         echo "See help page:"
         echo
-        echo -e "   ${yel}\$${reset}   ${grn}auric --help${reset}"
+        echo -e "   ${yel}\$${reset}   ${grn}auric${reset} ${yellow}--help${reset}"
         echo
         exit 1
     fi
@@ -129,90 +130,94 @@ download() {
     # Make sure we have a package name
     validate_pkgname "$1"
 
-    local DEPENDENCIES
-
     # Get a list of all installed packages
-    if [[ "${PACKAGES}" == "" ]]; then
-        PACKAGES=$(pacman -Sl)
+    if [[ "${LOCALPKGS}" == "" ]]; then
+        LOCALPKGS=$(pacman -Sl)
     fi
 
     # Move into the AUR folder
     cd "$AURDIR" || exit
 
-    for ARG in $@; do
+    for PKG in $@; do
 
         # Fetch the JSON data associated with the submitted package name
-        DEPENDENCIES=$(curl -fsSk "${AURURL}${ARG}")
+        curl_result=$(curl -fsSk "${AURURL}${PKG}")
 
-        if [[ $JSON_PARSER == 'jq' ]]; then
-            RESULTS=$(echo "$DEPENDENCIES" | jq -r '.results')
+        # Parse the result using the installed JSON parser
+        if [[ $JSONPARSER == 'jq' ]]; then
+            json_result=$(echo "$curl_result" | jq -r '.results')
         else
-            RESULTS=$(echo "$DEPENDENCIES" | jshon -e results)
+            json_result=$(echo "$curl_result" | jshon -e results)
         fi
 
         # Did the package query return a valid result?
-        if [[ $RESULTS == "[]" ]]; then
-            echo -e "${red}NOT AUR:${reset} ${ARG}"
-
-            # makepkg takes care of all pacman dependencies
-            # but if specified we do it here
-            if [[ $USE_PACMAN == true ]]; then
-                sudo pacman -S --noconfirm --needed ${ARG}
-            fi
+        # If not it means the package is not in the AUR
+        if [[ $json_result == "[]" ]]; then
+            echo -e "${red}MISSING:${reset} ${PKG} not in AUR. Makepkg will install it via pacman if needed"
         else
-    
-            # If a folder with the package name exists we skip it
-            if [[ -d "$ARG" ]]; then
-                echo -e "${red}PKGSKIP:${reset} ${cyan}$ARG${reset} already exists in repo."
+
+            # If a folder with the package name exists in the local repo we skip it
+            if [[ -d "$PKG" ]]; then
+                echo -e "${red}PKGSKIP:${reset} ${cyan}${PKG}${reset} already exists in local repo"
                 continue
             fi
 
-            echo -e "${yellow}CLONING:${reset} $ARG"
+            echo -e "${yellow}CLONING:${reset} $PKG"
 
-            git clone https://aur.archlinux.org/${ARG}.git 2> /dev/null
+            # Assemble the git package URL
+            printf -v URL "$GITURL" "$PKG"
 
+            # Clone it
+            git clone $URL 2> /dev/null
+
+            # Was the clone successful?
             if [[ "$?" -ne 0 ]]; then
-                echo -e "${red}CLONE FAILED: GIT ERROR CODE ${?}${reset}"
+                echo -e "${red}FAILURE:${reset} Unable to clone. Git error code: ${?}"
                 continue
             fi
 
-            if [[ -d "$ARG" ]]; then
-                echo -e "${green}SUCCESS:${reset} ${ARG} cloned"
+            # Extra precaution: We make sure the package folder was created in the local repo
+            if [[ -d "$PKG" ]]; then
+                echo -e "${green}SUCCESS:${reset} ${PKG} cloned"
             else
-                echo -e "${red}ERROR: Unable to download $ARG${reset}"
+                echo -e "${red}PROBLEM:${reset} An unknown error occurred. ${PKG} not downloaded"
                 continue
             fi
 
-            TO_INSTALL+=("$ARG")
+            # Add the package to the install array
+            TOINSTALL+=("$PKG")
 
-            # Get the package dependencies
-            if [[ $JSON_PARSER == 'jq' ]]; then
-                HAS_DEPENDS=$(echo "$DEPENDENCIES" | jq -r '.results[0].Depends') 
+            # Get the package dependencies using installed json parser
+            if [[ $JSONPARSER == 'jq' ]]; then
+                has_depends=$(echo "$curl_result" | jq -r '.results[0].Depends') 
             else
-                HAS_DEPENDS=$(echo "$DEPENDENCIES" | jshon -e results -e 0 -e Depends)
+                has_depends=$(echo "$curl_result" | jshon -e results -e 0 -e Depends)
             fi
 
-            if [[ $HAS_DEPENDS != "[]" ]] && [[ $HAS_DEPENDS != null ]]; then
+            # If there is a result, recurisvely call this function with the dependencies
+            if [[ $has_depends != "[]" ]] && [[ $has_depends != null ]]; then
 
-                if [[ $JSON_PARSER == 'jq' ]]; then
-                    DEPENDS=$(echo "$DEPENDENCIES" | jq -r '.results[0].Depends[]') 
+                if [[ $JSONPARSER == 'jq' ]]; then
+                    dependencies=$(echo "$curl_result" | jq -r '.results[0].Depends[]') 
                 else
-                    DEPENDS=$(echo "$DEPENDENCIES" | jshon -e results -e 0 -e Depends -a -u)
+                    dependencies=$(echo "$curl_result" | jshon -e results -e 0 -e Depends -a -u)
                 fi
         
                 # Run through the dependencies
-                for DEP in "${DEPENDS}"; do
+                for depend in "${dependencies}"; do
 
-                    # Remove everything after >= if the dependency name contains it
-                    DEP=$(echo $DEP | sed "s/[>=].*//")
-                    DEP=${DEP// /} # remove spaces just in case
+                    # Remove everything after >= in $depend
+                    # Some dependencies have minimum version requirements
+                    # which screws up the package name
+                    depend=$(echo $depend | sed "s/[>=].*//")
+                    depend=${depend// /} # remove spaces just in case
 
                     # See if the dependency is already installed
-                    echo "$PACKAGES" | grep "$DEP" > /dev/null
+                    echo "$LOCALPKGS" | grep "$depend" > /dev/null
 
                     # Download it
                     if [[ "$?" == 1 ]]; then
-                        download "$DEP"
+                        download "$depend"
                     fi
                 done
             fi
@@ -242,11 +247,15 @@ install() {
 
     cd ${AURDIR}/${PKG}
 
+    # Make sure the PKGBUILD script exists
     if [[ ! -f "${AURDIR}/${PKG}/PKGBUILD" ]]; then
         echo -e "${red}ERROR: PKGBUILD script does not exist in ${AURDIR}/${PKG}"
         echo
         exit 1
     fi
+
+    echo -e "Running makepkg on ${cyan}${PKG}${reset}"
+    echo
 
     # MAKEPKG FLAGS
     # -s = Resolve and sync pacman dependencies prior to building
@@ -271,12 +280,16 @@ update() {
             echo -e "${yellow}PULLING:${reset} ${DIR:2}"
 
             RESULT=$(git pull 2> /dev/null)
-            RESULT=${RESULT// /} # remove spaces
             RESULT=${RESULT//./} # remove periods
+            RESULT=${RESULT//-/} # remove dashes
+            RESULT=${RESULT// /} # remove spaces
             RESULT=${RESULT,,}   # lowercase
 
-            if [[ $RESULT != "$GIT_RESULT" ]]; then
-                echo -e "${red}NEW VER:${reset} ${cyan}${DIR:2}${reset} must be reinstalled"
+            if [[ $RESULT != "$GITRES" ]]; then
+                echo -e "${red}NEW VER:${reset} ${cyan}${DIR:2}${reset} has been updated and must be reinstalled"
+
+                # Add the package to the install array
+                TOINSTALL+=("${DIR:2}")                
             else
                 echo -e "${green}CURRENT:${reset} ${DIR:2} is up to date"
             fi
@@ -285,7 +298,7 @@ update() {
     else
         PKG=$1
         if [[ ! -d ${AURDIR}/${PKG} ]]; then
-            echo -e "${red}NOT FOUND: ${PKG} is not in ${AURDIR}"
+            echo -e "${red}MISSING:${reset} ${PKG} is not in ${AURDIR}"
             echo
             exit 1
         fi
@@ -295,12 +308,16 @@ update() {
         cd ${AURDIR}/${PKG} || exit
 
         RESULT=$(git pull 2> /dev/null)
-        RESULT=${RESULT// /} # remove spaces
         RESULT=${RESULT//./} # remove periods
+        RESULT=${RESULT//-/} # remove dashes
+        RESULT=${RESULT// /} # remove spaces
         RESULT=${RESULT,,}   # lowercase
 
-        if [[ $RESULT != "$GIT_RESULT" ]]; then
-            echo -e "${red}NEW VER:${reset} ${cyan}${PKG}${reset} must be reinstalled"
+        if [[ $RESULT != "$GITRES" ]]; then
+            echo -e "${red}NEW VER:${reset} ${cyan}${PKG}${reset} has been updated and must be reinstalled"
+
+            # Add the package to the install array
+            TOINSTALL+=("$PKG")    
         else
             echo -e "${green}CURRENT:${reset} ${PKG} is up to date"
         fi
@@ -311,7 +328,7 @@ update() {
 # ----------------------------------------------------------------------------------
 
 search() {
-    echo "Search not supported yet"
+  curl -s "https://aur.archlinux.org/rpc/?v=5&type=search&arg=$1" | jshon -a -e Name -u
 }
 
 # ----------------------------------------------------------------------------------
@@ -319,14 +336,14 @@ search() {
 # Migrate all previously installed AUR packages to AURIC
 migrate() {
 
-    echo "MIGRATING INSTALLED PACKAGES TO AURIC"
+    echo "MIGRATING INSTALLED AUR PACKAGES TO AURIC"
 
-    LOCALPKGS=$(pacman -Qm | awk '{print $1}')
-    for PKG in $LOCALPKGS; do
+    AURPKGS=$(pacman -Qm | awk '{print $1}')
+    for PKG in $AURPKGS; do
         PKG=${PKG// /}
         download "$PKG"
     done
-    TO_INSTALL=()
+    TOINSTALL=()
 }
 
 # ----------------------------------------------------------------------------------
@@ -366,9 +383,9 @@ remove() {
 
 # Is jq or jshon installed? 
 if command -v jq &>/dev/null; then
-    JSON_PARSER="jq"
+    JSONPARSER="jq"
 elif command -v jshon &>/dev/null; then
-    JSON_PARSER="jshon"
+    JSONPARSER="jshon"
 else
     echo -e "${red}Error: No JSON parser installed${reset}"
     echo
@@ -391,16 +408,18 @@ fi
 
 CMD=$1          # first argument
 CMD=${CMD,,}    # lowercase
-CMD=${CMD// /}  # remove spaces
 CMD=${CMD//-/}  # remove dashes
+CMD=${CMD// /}  # remove spaces
 
-# Help menu
+# Show help menu
 if [[ $CMD =~ [h] ]] ; then
+    echo -e "${yellow}HELP MENU${reset}"
     help
 fi
 
 # Invalid arguments trigger help
-if [[ $CMD =~ [^diusqrm] ]]; then
+if [[ $CMD =~ [^diusqrmv] ]]; then
+    echo -e "${red}INVALID REQUEST. SHOWING HELP MENU${reset}"
     help
 fi
 
@@ -418,6 +437,7 @@ case "$CMD" in
     i)  install "$@" ;;
     u)  update "$@" ;;
     s)  search "$@" ;;
+   sv)  searchv "$@" ;;
     q)  query "$@" ;;
     r)  remove "$@" ;;
     m)  migrate "$@" ;;
@@ -425,16 +445,28 @@ case "$CMD" in
 esac
 
 
-# If the TO_INSTALL array contains package names we offer to install
-if [[ ${#TO_INSTALL[@]} -gt 0 ]]; then
+# If the TOINSTALL array contains package names we offer to install them
+if [[ ${#TOINSTALL[@]} -gt 0 ]]; then
 
-    read -p "Would you like to install the downloaded packages? [Y/n] " CONSENT
+    echo
+    echo "Would you like to install the packages you downloaded?" 
+    echo
+    for PKG in ${TOINSTALL[@]}; do
+        echo -e "  ${cyan}${PKG}${reset}"
+    done
+    echo
+    read -p "ENTER [Y/n] " CONSENT
 
     if [[ $CONSENT =~ [y|Y] ]]; then
         echo
-        for PKG in ${TO_INSTALL[@]}; do
-            install $PKG
+
+        # Run through the install array in reverse order.
+        # This helps ensure that dependencies get installed first.
+        # The order doesn't matter after updating, only downloading
+        for (( i=${#TOINSTALL[@]}-1 ; i>=0 ; i-- )) ; do
+            install "${TOINSTALL[i]}"
         done
+
     else
         echo
         echo "Goodbye..."
