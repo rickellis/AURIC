@@ -27,8 +27,6 @@ The name AURIC is a play on two words: AUR and Rick. It's also the name of the m
 
     $  auric -v               # Show version number
 
-<img src="https://i.imgur.com/mIQODNc.png" />
-
 ## License
 
 MIT
