@@ -466,7 +466,7 @@ if [[ $CMD =~ [h] ]] ; then
 fi
 
 # Invalid arguments trigger help
-if [[ $CMD =~ [^diusqrmv] ]]; then
+if [[ $CMD =~ [^diusqrm] ]]; then
     echo -e "${red}INVALID REQUEST. SHOWING HELP MENU${reset}"
     help
 fi
@@ -485,7 +485,6 @@ case "$CMD" in
     i)  install "$@" ;;
     u)  update "$@" ;;
     s)  search "$@" ;;
-   sv)  searchv "$@" ;;
     q)  query "$@" ;;
     r)  remove "$@" ;;
     m)  migrate "$@" ;;
