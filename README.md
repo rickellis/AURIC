@@ -1,7 +1,7 @@
 # AURIC
 Minimalist AUR package manager based on vam.
 
-<img src="https://i.imgur.com/5Wwhrt6.png" />
+<img src="https://i.imgur.com/PmepGsO.png" />
 
 AURIC is mostly just __[vam](https://github.com/calebabutler/vam)__ with a pretty interface, color-formatted search results, better error trapping, package installation (via makepkg), JSON parsing using either jq or jshon, and a few additional features. Caleb Butler does an excellent job of describing the concept at the above link and making a case for using git pulls to manage AUR packages. His script is bare bones, so I built it into something I'd want to use.
 
