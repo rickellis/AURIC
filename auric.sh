@@ -413,7 +413,7 @@ remove() {
 
     if [[ $CONSENT =~ [y|Y] ]]; then
 
-        sudo pacman -Rsc $PKG
+        sudo pacman -Rsc $PKG --noconfirm
         rm -rf ${AURDIR}/${PKG}
 
         echo
