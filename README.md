@@ -1,5 +1,5 @@
 # AURIC
-Minimalist AUR package manager
+Minimalist AUR package manager based on vam.
 
 <img src="https://i.imgur.com/5Wwhrt6.png" />
 
