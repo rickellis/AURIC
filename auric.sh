@@ -71,41 +71,15 @@ fi
 # Help screen
 help() {
     echo 
-    echo "Download a package"
-    echo
-    echo -e "   ${yel}\$${reset}   ${grn}auric${reset} ${yellow}-d${reset} ${cyn}package-name${reset}"
-    echo
-    echo "Install a downloaded package"
-    echo
-    echo -e "   ${yel}\$${reset}   ${grn}auric${reset} ${yellow}-i${reset} ${cyn}package-name${reset}"
-    echo
-    echo "Update a package"
-    echo
-    echo -e "   ${yel}\$${reset}   ${grn}auric${reset} ${yellow}-u${reset} ${cyn}package-name${reset}"
-    echo
-    echo "Update all installed packages"
-    echo
-    echo -e "   ${yel}\$${reset}   ${grn}auric${reset} ${yellow}-u${reset}"
-    echo
-    echo "Search for a package"
-    echo
-    echo -e "   ${yel}\$${reset}   ${grn}auric${reset} ${yellow}-s${reset} ${cyn}package-name${reset}"
-    echo
-    echo "Show all local packages in AURIC"
-    echo
-    echo -e "   ${yel}\$${reset}   ${grn}auric${reset} ${yellow}-q${reset}"
-    echo
-    echo "Remove a package"
-    echo
-    echo -e "   ${yel}\$${reset}   ${grn}auric${reset} ${yellow}-r${reset} ${cyn}package-name${reset}"
-    echo
-    echo "Migrate previously installed AUR packages to AURIC"
-    echo
-    echo -e "   ${yel}\$${reset}   ${grn}auric${reset} ${yellow}-m${reset}"
-    echo
-    echo "Show version info"
-    echo
-    echo -e "   ${yel}\$${reset}   ${grn}auric${reset} ${yellow}-v${reset}"
+    echo -e "auric -d package-name\t# Download a package"
+    echo -e "auric -i package-name\t# Install a downloaded package"
+    echo -e "auric -u package-name\t# Update a package"
+    echo -e "auric -u \t\t# Update all installed packages"
+    echo -e "auric -s package-name\t# Search for a package"
+    echo -e "auric -q \t\t# Show all local packages in AURIC"
+    echo -e "auric -r package-name\t# Remove a package"
+    echo -e "auric -m \t\t# Migrate previously installed AUR packages to AURIC"
+    echo -e "auric -v \t\t# Show version info"
     echo
     exit 1
 }
@@ -117,9 +91,7 @@ validate_pkgname(){
     if [[ "$1" == false ]]; then
         echo -e "${red}Error: Package name required${reset}"
         echo
-        echo "See help page:"
-        echo
-        echo -e "   ${yel}\$${reset}   ${grn}auric${reset} ${yellow}--help${reset}"
+        echo -e "auric --help \t# Help menu"
         echo
         exit 1
     fi
@@ -156,7 +128,7 @@ download() {
         # Did the package query return a valid result?
         # If not it means the package is not in the AUR
         if [[ $json_result == "[]" ]]; then
-            echo -e "${red}MISSING:${reset} ${cyan}${PKG}${reset} ${red}not in AUR.${reset} ${yellow}Makepkg will resolve all non-AUR dependencies${reset}"
+            echo -e "${red}MISSING:${reset} ${cyan}${PKG}${reset} ${red}not in AUR. ${reset} ${yellow}Makepkg will resolve all non-AUR dependencies${reset}"
         else
 
             # If a folder with the package name exists in the local repo we skip it
@@ -459,7 +431,7 @@ fi
 
 # No arguments, we show help
 if [[ -z "$1" ]]; then
-    echo -e "${yellow}HELP MENU${reset}"
+    echo -e "AURIC COMMANDS"
     help
 fi
 
@@ -470,7 +442,7 @@ CMD=${CMD// /}  # remove spaces
 
 # Show help menu
 if [[ $CMD =~ [h] ]] ; then
-    echo -e "${yellow}HELP MENU${reset}"
+    echo -e "AURIC COMMANDS"
     help
 fi
 
