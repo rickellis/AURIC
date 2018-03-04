@@ -26,7 +26,7 @@ The name AURIC is a play on two words: AUR and Rick. It's also the name of the m
     $  auric -m               # Migrate previously installed AUR packages to AURIC
 
 
-<img src="https://i.imgur.com/8UBDzLI.png" />
+<img src="https://i.imgur.com/mIQODNc.png" />
 
 ## License
 
