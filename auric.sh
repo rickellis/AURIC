@@ -269,7 +269,7 @@ update() {
     cd "$AURDIR" || exit
 
     if [[ -z $1 ]]; then
-        echo "UPDATING ALL PACKAES"
+        echo "UPDATING ALL PACKAGES"
         echo
         for DIR in ./*; do
             cd "$DIR" || exit
