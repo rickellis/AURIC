@@ -10,10 +10,12 @@
 VERSION="1.0.0"
 #-----------------------------------------------------------------------------------
 #
-# AURIC is mostly just vam with a pretty face, better error trapping, makepkg
-# support, JSON parsing using either jq or jshon, and a few additional features
+# AURIC is mostly just vam with a pretty interface, color-formatted 
+# search results, better error trapping, package installation (via makepkg),
+# JSON parsing using either jq or jshon, and a few additional features.
 #
-# The name AURIC is a play on two words: AUR and Rick. It also means gold.
+# The name AURIC is a play on two words: AUR and Rick. It's also the name
+# of the main antagonist in the James Bond film Goldfinger.
 #-----------------------------------------------------------------------------------
 # Authors   :   Rick Ellis      https://github.com/rickellis/AURIC
 #           :   Caleb Butler    https://github.com/calebabutler/vam        
