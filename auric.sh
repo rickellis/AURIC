@@ -66,9 +66,6 @@ else
     }
 fi
 
-clear
-heading purple "AURIC VERSION ${VERSION}"
-
 # ----------------------------------------------------------------------------------
 
 # Help screen
@@ -105,6 +102,10 @@ help() {
     echo "Migrate previously installed AUR packages to AURIC"
     echo
     echo -e "   ${yel}\$${reset}   ${grn}auric${reset} ${yellow}-m${reset}"
+    echo
+    echo "Show version info"
+    echo
+    echo -e "   ${yel}\$${reset}   ${grn}auric${reset} ${yellow}-v${reset}"
     echo
     exit 1
 }
@@ -370,7 +371,7 @@ search() {
 migrate() {
 
     echo "MIGRATING INSTALLED AUR PACKAGES TO AURIC"
-
+    echo
     AURPKGS=$(pacman -Qm | awk '{print $1}')
     for PKG in $AURPKGS; do
         PKG=${PKG// /}
@@ -383,13 +384,13 @@ migrate() {
 
 # Show locally installed packages
 query() {
-    echo "The following packages are installed in ${AURDIR}"
+    echo "INSTALLED PACKAGES"
     echo
     cd $AURDIR
     PKGS=$(ls)
 
     for P in $PKGS; do
-        echo -e "    ${cyan}${P}${reset}"
+        echo -e "  ${cyan}${P}${reset}"
     done
 }
 
@@ -425,6 +426,14 @@ remove() {
 }
 
 # ----------------------------------------------------------------------------------
+
+function version() {
+    heading purple "AURIC VERSION ${VERSION}"
+}
+
+# ----------------------------------------------------------------------------------
+
+echo
 
 # Is jq or jshon installed? 
 if command -v jq &>/dev/null; then
@@ -466,7 +475,7 @@ if [[ $CMD =~ [h] ]] ; then
 fi
 
 # Invalid arguments trigger help
-if [[ $CMD =~ [^diusqrm] ]]; then
+if [[ $CMD =~ [^diusqrmv] ]]; then
     echo -e "${red}INVALID REQUEST. SHOWING HELP MENU${reset}"
     help
 fi
@@ -488,6 +497,7 @@ case "$CMD" in
     q)  query "$@" ;;
     r)  remove "$@" ;;
     m)  migrate "$@" ;;
+    v)  version ;;
     *)  help ;;
 esac
 
