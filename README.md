@@ -1,6 +1,8 @@
 # AURIC
 Minimalist AUR package manager
 
+<img src="https://i.imgur.com/5Wwhrt6.png" />
+
 AURIC is mostly just __[vam](https://github.com/calebabutler/vam)__ with a pretty interface, color-formatted search results, better error trapping, package installation (via makepkg), JSON parsing using either jq or jshon, and a few additional features. Caleb Butler does an excellent job of describing the concept at the above link and making a case for using git pulls to manage AUR packages. His script is bare bones, so I built it into something I'd want to use.
 
 The name AURIC is a play on two words: AUR and Rick. It's also the name of the main antagonist in the James Bond film Goldfinger.
@@ -22,6 +24,9 @@ The name AURIC is a play on two words: AUR and Rick. It's also the name of the m
     $  auric -r package-name  # Run sudo pacman -Rsc and delete the local git repo
 
     $  auric -m               # Migrate previously installed AUR packages to AURIC
+
+
+<img src="https://i.imgur.com/8UBDzLI.png" />
 
 ## License
 
