@@ -7,11 +7,11 @@
 #   AUR package manager
 #
 #-----------------------------------------------------------------------------------
-VERSION="1.1.0"
+VERSION="1.1.1"
 #-----------------------------------------------------------------------------------
 #
 # AURIC is mostly just vam with a pretty interface, better version comparison
-# handling, package installation (via makepkg), keyword coloring in search, 
+# handling, package installation, search keyword coloring, 
 # JSON parsing using either jq or jshon, and a few additional features
 #
 # The name AURIC is a play on two words: AUR and Rick. It's also the name
@@ -35,8 +35,8 @@ AUR_SRCH_URL="https://aur.archlinux.org/rpc/?v=5&type=search&by=name&arg="
 GIT_AUR_URL="https://aur.archlinux.org/%s.git"
 
 # Successful git pull result - lowercase with no spaces, dashes, or punctuation.
-# On MacOS, git pull results in: Already up-to-date.
-# On Linux, git pull results in: Already up to date.
+# On MacOS a git pull results in: Already up-to-date.
+# On Linux a git pull results in: Already up to date.
 # Stripping everything but a-z allows cross-platform reliability.
 GIT_RES_STR="alreadyuptodate"
 
@@ -104,7 +104,6 @@ validate_pkgname(){
 
 # Download a package and its dependencies from AUR
 download() {
-
     # Make sure we have a package name
     validate_pkgname "$1"
 
@@ -243,25 +242,20 @@ install() {
 # Update git repos
 update() {
     cd "$AURDIR" || exit
-
     if [[ -z $1 ]]; then
         echo "UPDATING ALL PACKAGES"
         echo
         for DIR in ./*; do
-
             # Extract the package name from the directory path
             DIR=${DIR//\//}
             DIR=${DIR//./}
-
             doupdate $DIR
-
             echo
             cd ..
         done
     else
         echo "UPDATING PACKAGE"
         echo
-
         doupdate $1
     fi 
 }
@@ -270,7 +264,6 @@ update() {
 
 # Perform the upate routine
 doupdate() {
-
     local PKG
     PKG=$1
 
@@ -305,7 +298,6 @@ doupdate() {
     # Strip variables
     NEWVER=$(echo $NEWVER | sed "s/\$[{]*[_a-zA-Z0-9]*[}]*//g")
     NEWREL=$(echo $NEWREL | sed "s/\$[{]*[_a-zA-Z0-9]*[}]*//g")
-
 
     # If NEWVER or NEWRL is blank it means that either pkgver= or pgkrel= in PKGBUILD
     # contained variables. Rather than trying to parse out the values of those variables,
@@ -356,7 +348,6 @@ doupdate() {
 
 # AUR package name search
 search() {
-
     local json_result
     local PKG
     PKG=$1
@@ -392,7 +383,6 @@ search() {
 
 # Migrate all previously installed AUR packages to AURIC
 migrate() {
-
     echo "MIGRATING INSTALLED AUR PACKAGES TO AURIC"
     echo
     AURPKGS=$(pacman -Qm | awk '{print $1}')
@@ -436,10 +426,8 @@ remove() {
     read -p "ENTER [Y/n] " CONSENT
 
     if [[ $CONSENT =~ [y|Y] ]]; then
-
         sudo pacman -Rsc $PKG --noconfirm
         rm -rf ${AURDIR}/${PKG}
-
         echo
         echo -e "${red}REMOVED:${reset} ${PKG}"
     else
@@ -524,10 +512,8 @@ case "$CMD" in
     *)  help ;;
 esac
 
-
 # If the TO_INSTALL array contains package names we offer to install them
 if [[ ${#TO_INSTALL[@]} -gt 0 ]]; then
-
     echo
     echo "Would you like to install the packages?" 
     echo
@@ -539,14 +525,12 @@ if [[ ${#TO_INSTALL[@]} -gt 0 ]]; then
 
     if [[ $CONSENT =~ [y|Y] ]]; then
         echo
-
         # Run through the install array in reverse order.
         # This helps ensure that dependencies get installed first.
         # The order doesn't matter after updating, only downloading
         for (( i=${#TO_INSTALL[@]}-1 ; i>=0 ; i-- )) ; do
             install "${TO_INSTALL[i]}"
         done
-
     else
         echo
         echo "Goodbye..."
