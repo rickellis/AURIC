@@ -223,10 +223,10 @@ install() {
 doinstall() {
     # Make sure we have a package name
     validate_pkgname "$1"
-
     local PKG
     PKG=$1
 
+    echo
     if [[ ! -d "${AURDIR}/${PKG}" ]]; then
         echo -e "${red}MISSING:${reset} Package does not exist in local repo"
         echo
@@ -242,7 +242,6 @@ doinstall() {
         exit 1
     fi
 
-    echo
     echo -e "RUNNING MAKEPKG ON ${cyan}${PKG}${reset}"
     echo
 
