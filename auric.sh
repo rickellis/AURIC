@@ -7,12 +7,12 @@
 #   AUR package manager
 #
 #-----------------------------------------------------------------------------------
-VERSION="1.0.2"
+VERSION="1.1.0"
 #-----------------------------------------------------------------------------------
 #
-# AURIC is mostly just vam with a pretty interface, color-formatted 
-# search results, better error trapping, package installation (via makepkg),
-# JSON parsing using either jq or jshon, and a few additional features.
+# AURIC is mostly just vam with a pretty interface, better version comparison
+# handling, package installation (via makepkg), keyword coloring in search, 
+# JSON parsing using either jq or jshon, and a few additional features
 #
 # The name AURIC is a play on two words: AUR and Rick. It's also the name
 # of the main antagonist in the James Bond film Goldfinger.
@@ -34,7 +34,10 @@ AUR_SRCH_URL="https://aur.archlinux.org/rpc/?v=5&type=search&by=name&arg="
 # GIT URL for AUR repos. %s will be replaced with package name
 GIT_AUR_URL="https://aur.archlinux.org/%s.git"
 
-# Successful git pull result - lowercase with no spaces, dashes, or punctuation
+# Successful git pull result - lowercase with no spaces, dashes, or punctuation.
+# On MacOS, git pull results in: Already up-to-date.
+# On Linux, git pull results in: Already up to date.
+# Stripping everything but a-z allows cross-platform reliability.
 GIT_RES_STR="alreadyuptodate"
 
 # Will contain the list of all installed packages. 
@@ -245,58 +248,108 @@ update() {
         echo "UPDATING ALL PACKAGES"
         echo
         for DIR in ./*; do
-            cd "$DIR" || exit
 
-            echo -e "${yellow}PULLING:${reset} ${DIR:2}"
+            # Extract the package name from the directory path
+            DIR=${DIR//\//}
+            DIR=${DIR//./}
 
-            RESULT=$(git pull 2> /dev/null)
+            doupdate $DIR
 
-            # Format the result string for reliability
-            RESULT=${RESULT//./} # remove periods
-            RESULT=${RESULT//-/} # remove dashes
-            RESULT=${RESULT// /} # remove spaces
-            RESULT=${RESULT,,}   # lowercase
-
-            if [[ $RESULT != "$GIT_RES_STR" ]]; then
-                echo -e "${red}NEW VER:${reset} ${cyan}${DIR:2}${reset} has been updated and must be reinstalled"
-
-                # Add the package to the install array
-                TO_INSTALL+=("${DIR:2}")                
-            else
-                echo -e "${green}CURRENT:${reset} ${DIR:2} is up to date"
-            fi
+            echo
             cd ..
         done
     else
-        PKG=$1
-        if [[ ! -d ${AURDIR}/${PKG} ]]; then
-            echo -e "${red}MISSING:${reset} ${PKG} is not in ${AURDIR}"
-            echo
-            exit 1
-        fi
+        echo "UPDATING PACKAGE"
+        echo
 
-        echo -e "${yellow}PULLING:${reset} ${PKG}"
-        
-        cd ${AURDIR}/${PKG} || exit
+        doupdate $1
+    fi 
+}
 
-        RESULT=$(git pull 2> /dev/null)
+# ----------------------------------------------------------------------------------
+
+# Perform the upate routine
+doupdate() {
+
+    local PKG
+    PKG=$1
+
+    if [[ ! -d ${AURDIR}/${PKG} ]]; then
+        echo -e "${red}MISSING:${reset} ${PKG} is not a package in ${AURDIR}"
+        echo
+        exit 1
+    fi
+
+    cd ${AURDIR}/${PKG} || exit
+
+    GITRESULT=$(git pull 2> /dev/null)
+
+    # Get the version number of the currently installed package
+    LOCALVER=$(pacman -Q $PKG)
+
+    # Remove the package name, leaving only the version number
+    LOCALVER=$(echo $LOCALVER | sed "s/${PKG} //")
+
+    # Open PKGBUILD to get the new version number and release number
+    NEWVER=$(grep -r "^pkgver=+*" PKGBUILD)
+    NEWREL=$(grep -r "^pkgrel=+*" PKGBUILD)
+
+    # Remove quotes
+    NEWVER=$(echo $NEWVER | sed "s/['\"]//g")
+    NEWREL=$(echo $NEWREL | sed "s/['\"]//g")
+
+    # Remove pkgver= and pkgrel=
+    NEWVER=$(echo $NEWVER | sed "s/pkgver=//")
+    NEWREL=$(echo $NEWREL | sed "s/pkgrel=//")
+
+    # Strip variables
+    NEWVER=$(echo $NEWVER | sed "s/\$[{]*[_a-zA-Z0-9]*[}]*//g")
+    NEWREL=$(echo $NEWREL | sed "s/\$[{]*[_a-zA-Z0-9]*[}]*//g")
+
+
+    # If NEWVER or NEWRL is blank it means that either pkgver= or pgkrel= in PKGBUILD
+    # contained variables. Rather than trying to parse out the values of those variables,
+    # we will instead use the git pull result. This has one major downside: If the
+    # user doesn't immediately install the new package, the next time the update function
+    # gets run the package will show as being up to date even though the installed one
+    # is older. If the PKGBUILD file does not contain variables in pkgver= or pgkrel= 
+    # we can do an actual version comparison using vercmp every time that update is run.
+    # Here we conditionally select which method of comparison to use:
+    if [[ -z $NEWVER ]] || [[ -z $NEWREL ]]; then
 
         # Format the result string for reliability
-        RESULT=${RESULT//./} # remove periods
-        RESULT=${RESULT//-/} # remove dashes
-        RESULT=${RESULT// /} # remove spaces
-        RESULT=${RESULT,,}   # lowercase
+        GITRESULT=${GITRESULT//./} # remove periods
+        GITRESULT=${GITRESULT//-/} # remove dashes
+        GITRESULT=${GITRESULT// /} # remove spaces
+        GITRESULT=${GITRESULT,,}   # lowercase
 
-        if [[ $RESULT != "$GIT_RES_STR" ]]; then
-            echo -e "${red}NEW VER:${reset} ${cyan}${PKG}${reset} has been updated and must be reinstalled"
-
-            # Add the package to the install array
-            TO_INSTALL+=("$PKG")    
+        if [[ $GITRESULT != "$GIT_RES_STR" ]]; then
+            MUST_UPDATE=true
         else
-            echo -e "${green}CURRENT:${reset} ${PKG} is up to date"
+            MUST_UPDATE=false
         fi
-        cd ..
-    fi   
+        
+        MESSAGE="A new version of ${PKG} is avaialbe"
+    elif [[ $(vercmp $NEWVER $LOCALVER) -eq 1 ]]; then
+        MUST_UPDATE=true
+        if [[ ! -z $NEWREL ]]; then
+            NEWVER="${NEWVER}-${NEWREL}"
+        fi
+        MESSAGE="${PKG} ${NEWVER} is available"
+    else
+        MUST_UPDATE=false
+        MESSAGE="PACKAGE: ${PKG}"
+    fi
+
+    # Show the user the restult
+    if [[ $MUST_UPDATE == true ]]; then
+        echo -e "${yellow}UPDATE: ${MESSAGE}${reset}"
+        echo -e "${green}PKGBLD: Build files have been downloaded. ${PKG} is ready to be reinstalled${reset}"
+        TO_INSTALL+=("$PKG")
+    else
+        echo -e "${MESSAGE}"
+        echo -e "${cyan}CURRENT: ${PKG} is up to date${reset}"
+    fi
 }
 
 # ----------------------------------------------------------------------------------
@@ -321,18 +374,16 @@ search() {
     if [[ $json_result == "[]" ]] || [[ $json_result == null ]]; then
         echo -e "${red}NO RESULTS:${reset} No results for the term \"${cyan}${PKG}${reset}\""
     else
-
         echo "SEARCH RESULTS"
         echo
         for res in $json_result; do
-
             # Capture the search term and surround it with %s
             # so we can use printf to replace with color variables
             res=$(echo "$res" | sed "s/\(.*\)\(${PKG}\)\(.*\)/\1%s\2%s\3/")
 
             printf -v res "$res" "${cyan}" "${reset}"
 
-            echo -e " $res"
+            echo -e " ${res}"
         done
     fi
 }
@@ -478,7 +529,7 @@ esac
 if [[ ${#TO_INSTALL[@]} -gt 0 ]]; then
 
     echo
-    echo "Would you like to install the packages you downloaded?" 
+    echo "Would you like to install the packages?" 
     echo
     for PKG in ${TO_INSTALL[@]}; do
         echo -e "  ${cyan}${PKG}${reset}"
