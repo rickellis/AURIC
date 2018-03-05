@@ -1,9 +1,9 @@
 # AURIC
 Minimalist AUR package manager based on vam.
 
-<img src="https://i.imgur.com/PmepGsO.png" />
+<img src="https://i.imgur.com/klpv9KP.png" />
 
-AURIC is mostly just __[vam](https://github.com/calebabutler/vam)__ with a pretty interface, color-formatted search results, better error trapping, package installation (via makepkg), JSON parsing using either jq or jshon, and a few additional features. Caleb Butler does an excellent job of describing the concept at the above link and making a case for using git pulls to manage AUR packages. His script is bare bones, so I built it into something I'd want to use.
+AURIC is mostly just __[vam](https://github.com/calebabutler/vam)__ with a pretty interface, better version comparison handling, package installation (via makepkg), JSON parsing using either jq or jshon, and a few additional features. Caleb Butler does an excellent job of describing how to use git pulls to manage AUR packages. His script is bare bones, so I built it into something I'd want to use.
 
 The name AURIC is a play on two words: AUR and Rick. It's also the name of the main antagonist in the James Bond film Goldfinger.
 
