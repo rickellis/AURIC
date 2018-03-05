@@ -7,7 +7,7 @@
 #   AUR package manager
 #
 #-----------------------------------------------------------------------------------
-VERSION="1.1.1"
+VERSION="1.1.2"
 #-----------------------------------------------------------------------------------
 #
 # AURIC is mostly just vam with a pretty interface, better version comparison
@@ -333,11 +333,12 @@ doupdate() {
 
         if [[ $GITRESULT != "$GIT_RES_STR" ]]; then
             MUST_UPDATE=true
+            MESSAGE="A new version of ${PKG} is avaialbe"
         else
             MUST_UPDATE=false
+            MESSAGE="PACKAGE: ${PKG}"
         fi
-        
-        MESSAGE="A new version of ${PKG} is avaialbe"
+
     elif [[ $(vercmp $NEWVER $LOCALVER) -eq 1 ]]; then
         MUST_UPDATE=true
         if [[ ! -z $NEWREL ]]; then
