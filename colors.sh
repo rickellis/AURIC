@@ -300,7 +300,6 @@ function bheading() {
 # echo -e "${wht}White text${r}"
 # echo -e "${b}${wht}Bold White text${r}"
 
-
 # heading rnd "Random" # Random color
 # heading gry "Grey"
 # heading chr "Charcoal"
