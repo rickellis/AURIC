@@ -12,16 +12,16 @@ The name AURIC is a play on two words: AUR and Rick. It's also the name of the m
 
     $  auric -d package-name  # Download a package
 
-    $  auric -i package-name  # Install a downloaded package from AUR
+    $  auric -i package-name  # Install package downloaded from AUR
 
     $  auric -u package-name  # Update a specific package
     $  auric -u               # Update all packages
 
     $  auric -s package-name  # Search the AUR repo for a package
 
-    $  auric -u               # List all local AUR packages
+    $  auric -q               # List all local AUR packages
 
-    $  auric -r package-name  # Run sudo pacman -Rsc and delete the local git repo
+    $  auric -r package-name  # Runs sudo pacman -Rsc and deletes the local git repo
 
     $  auric -m               # Migrate previously installed AUR packages to AURIC
 
