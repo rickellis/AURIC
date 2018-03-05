@@ -203,8 +203,24 @@ download() {
 
 # ----------------------------------------------------------------------------------
 
-# Install a package
 install() {
+    # Make sure we have a package name
+    validate_pkgname "$1"
+    local PKG
+    PKG=$1
+    read -p "Are you sure you want to install ${PKG} [Y/n]? " CONSENT 
+    if [[ $CONSENT =~ [y|Y] ]]; then
+        doinstall $PKG
+    else
+        echo
+        echo "Goodbye..."
+    fi
+}
+
+# ----------------------------------------------------------------------------------
+
+# Install a package
+doinstall() {
     # Make sure we have a package name
     validate_pkgname "$1"
 
@@ -226,6 +242,7 @@ install() {
         exit 1
     fi
 
+    echo
     echo -e "RUNNING MAKEPKG ON ${cyan}${PKG}${reset}"
     echo
 
@@ -512,6 +529,8 @@ case "$CMD" in
     *)  help ;;
 esac
 
+# ----------------------------------------------------------------------------------
+
 # If the TO_INSTALL array contains package names we offer to install them
 if [[ ${#TO_INSTALL[@]} -gt 0 ]]; then
     echo
@@ -524,12 +543,11 @@ if [[ ${#TO_INSTALL[@]} -gt 0 ]]; then
     read -p "ENTER [Y/n] " CONSENT
 
     if [[ $CONSENT =~ [y|Y] ]]; then
-        echo
         # Run through the install array in reverse order.
         # This helps ensure that dependencies get installed first.
         # The order doesn't matter after updating, only downloading
         for (( i=${#TO_INSTALL[@]}-1 ; i>=0 ; i-- )) ; do
-            install "${TO_INSTALL[i]}"
+            doinstall "${TO_INSTALL[i]}"
         done
     else
         echo
