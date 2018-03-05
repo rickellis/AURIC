@@ -7,7 +7,7 @@
 #   AUR package manager
 #
 #-----------------------------------------------------------------------------------
-VERSION="1.1.2"
+VERSION="1.1.3"
 #-----------------------------------------------------------------------------------
 #
 # AURIC is mostly just vam with a pretty interface, better version comparison
@@ -316,7 +316,7 @@ doupdate() {
     NEWREL=$(echo $NEWREL | sed "s/\$[{]*[_a-zA-Z0-9]*[}]*//g")
 
     # If NEWVER or NEWRL is blank it means that either pkgver= or pgkrel= in PKGBUILD
-    # contained variables. Rather than trying to parse out the values of those variables,
+    # contained a variable. Rather than trying to parse out the values of those variables,
     # we will instead use the git pull result. This has one major downside: If the
     # user doesn't immediately install the new package, the next time the update function
     # gets run the package will show as being up to date even though the installed one
@@ -326,10 +326,8 @@ doupdate() {
     if [[ -z $NEWVER ]] || [[ -z $NEWREL ]]; then
 
         # Format the result string for reliability
-        GITRESULT=${GITRESULT//./} # remove periods
-        GITRESULT=${GITRESULT//-/} # remove dashes
-        GITRESULT=${GITRESULT// /} # remove spaces
         GITRESULT=${GITRESULT,,}   # lowercase
+        GITRESULT=$(echo $GITRESULT | sed "s/[^a-z]//g") # Remove all non a-z
 
         if [[ $GITRESULT != "$GIT_RES_STR" ]]; then
             MUST_UPDATE=true
@@ -481,6 +479,15 @@ if ! command -v curl &>/dev/null; then
     echo -e "${red}DEPENDENCY ERROR:${reset} Curl not installed"
     echo
     echo "This script requires Curl to retrieve search results and package info"
+    echo
+    exit 1
+fi
+
+# Is vercmp installed?
+if ! command -v vercmp &>/dev/null; then
+    echo -e "${red}DEPENDENCY ERROR:${reset} vercmp not installed"
+    echo
+    echo "This script requires vercmp to to compare version numbers"
     echo
     exit 1
 fi
