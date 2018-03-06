@@ -7,7 +7,7 @@
 #   AUR package manager
 #
 #-----------------------------------------------------------------------------------
-VERSION="1.1.4"
+VERSION="1.1.5"
 #-----------------------------------------------------------------------------------
 #
 # AURIC is mostly just vam with a pretty interface, better version comparison
@@ -91,10 +91,12 @@ help() {
 
 # Validate whether an argument was passed
 validate_pkgname(){
-    if [[ "$1" == false ]]; then
+    if [[ -z "$1" ]]; then
         echo -e "${red}Error: Package name required${reset}"
         echo
-        echo -e "auric --help \t# Help menu"
+        echo "See help menu for more info:"
+        echo
+        echo -e "\t${cyan}auric --help${reset}"
         echo
         exit 1
     fi
@@ -258,9 +260,9 @@ doinstall() {
 # Update git repos
 update() {
     cd "$AURDIR" || exit
+    echo "CHECKING FOR UPDATES"
+    echo    
     if [[ -z $1 ]]; then
-        echo "UPDATING ALL PACKAGES"
-        echo
         for DIR in ./*; do
             # Extract the package name from the directory path
             DIR=${DIR//\//}
@@ -270,8 +272,6 @@ update() {
             cd ..
         done
     else
-        echo "UPDATING PACKAGE"
-        echo
         doupdate $1
     fi 
 }
