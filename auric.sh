@@ -331,37 +331,37 @@ doupdate() {
         GITRESULT=$(echo $GITRESULT | sed "s/[^a-z]//g") # Remove all non a-z
 
         if [[ $GITRESULT != "$GIT_RES_STR" ]]; then
-            MUST_UPDATE=true
-            MESSAGE="A new version of ${PKG} is avaiable."
-            MSGXTRA="IMPORTANT: Update this package immediately. Unable to use version comparison so\n"
-            MSGXTRA+="any subsequent git pulls will show the package as being current even if it isn't"
+            must_update=true
+            message="A new version of ${PKG} is avaiable."
+            msgxtra="IMPORTANT: Update this package immediately. Unable to use version comparison so\n"
+            msgxtra+="any subsequent git pulls will show the package as being current even if it isn't"
         else
-            MUST_UPDATE=false
-            MESSAGE="PACKAGE: ${PKG}"
-            MSGXTRA=""
+            must_update=false
+            message="PACKAGE: ${PKG}"
+            msgxtra=""
         fi
 
     elif [[ $(vercmp $NEWVER $LOCALVER) -eq 1 ]]; then
-        MUST_UPDATE=true
+        must_update=true
         if [[ ! -z $NEWREL ]]; then
             NEWVER="${NEWVER}-${NEWREL}"
         fi
-        MESSAGE="${PKG} ${NEWVER} is available"
-        MSGXTRA=""
+        message="${PKG} ${NEWVER} is available"
+        msgxtra=""
     else
-        MUST_UPDATE=false
-        MESSAGE="PACKAGE: ${PKG}"
-        MSGXTRA=""
+        must_update=false
+        message="PACKAGE: ${PKG}"
+        msgxtra=""
     fi
 
     # Show the user the restult
-    if [[ $MUST_UPDATE == true ]]; then
-        echo -e "${yellow}UPDATE: ${MESSAGE}${reset}"
+    if [[ $must_update == true ]]; then
+        echo -e "${yellow}UPDATE: ${message}${reset}"
         echo -e "${green}PKGBLD: Build files have been downloaded. ${PKG} is ready to be reinstalled${reset}"
-        echo -e "${red}${MSGXTRA}${reset}"
+        echo -e "${red}${msgxtra}${reset}"
         TO_INSTALL+=("$PKG")
     else
-        echo -e "${MESSAGE}"
+        echo -e "${message}"
         echo -e "${cyan}CURRENT: ${PKG} is up to date${reset}"
     fi
 }
