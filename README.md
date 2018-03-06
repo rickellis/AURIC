@@ -44,7 +44,7 @@ Should you use AURIC? If you are happy with your current package manager I would
 
     $  auric -q               # List all your local AUR packages
 
-    $  auric -r package-name  # Runs sudo pacman -Rsc and deletes the local git repo
+    $  auric -r package-name  # Remove package. It runs sudo pacman -Rsc and deletes the local git repo
 
     $  auric -m               # Migrate previously installed AUR packages to AURIC
 
