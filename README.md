@@ -42,7 +42,7 @@ Should you use AURIC? If you are happy with your current package manager I would
 
     $  auric -s package-name  # Search the AUR repo for a package
 
-    $  auric -q               # List all local AUR packages
+    $  auric -q               # List all your local AUR packages
 
     $  auric -r package-name  # Runs sudo pacman -Rsc and deletes the local git repo
 
