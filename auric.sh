@@ -364,8 +364,8 @@ doupdate() {
 
     # Show the user the restult
     if [[ $must_update == true ]]; then
-        echo -e "${yellow}UPDATE: ${message}${reset}"
-        echo -e "${green}PKGBLD: Build files have been downloaded. ${PKG} is ready to be reinstalled${reset}"
+        echo -e "${green}UPDATE: ${message}${reset}"
+        echo -e "${yellow}PKGBLD: Build files have been downloaded. ${PKG} is ready to be reinstalled${reset}"
         echo -e "${red}${msgxtra}${reset}"
         TO_INSTALL+=("$PKG")
     else
