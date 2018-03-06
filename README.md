@@ -21,7 +21,7 @@ The process wasn't that hard, but it did require keeping track of version number
 
 After the AUR moved everything to github the process got simpler: Instead of manually downloading a package, you just use `git clone`. To check for updates, instead of looking up version numbers, you run a `git pull`. If the pull is already up to date there's nothing to do. If the pull results in changes you run `makepkg` again. Definitely easier, but if the package contains dependencies that are not from the official repositories (makepkg resolves all pacman dependencies automatically) then you still have to manage them yourself.
 
-AURIC started life as my desire to write a shell script that automates the above process and solves a problem I describe below. When I stumbled onto vam I realized that someone else had the same idea and had written the core functionality. I took that script an built it into AURIC.
+AURIC started life as my desire to write a shell script that automates the above process. When I stumbled onto vam I realized that someone else had a similar idea and had written the core functionality. I took that script an built it into AURIC.
 
 The one major downside to using a `git pull` to determine if a package is out of date is this: You can only do a git pull once to determine if a package is out of date. Since the pull updates your local repo, subsequent calls to `git pull` will show the package as being current--even if you didn't actually run `makepkg` to update the package. In other words, you might have applications that are out of date even though git thinks you are current.
 
