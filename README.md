@@ -35,7 +35,7 @@ Should you use AURIC? If you are happy with your current package manager I would
 
     $  auric -d package-name  # Download a package
 
-    $  auric -i package-name  # Install package downloaded from AUR
+    $  auric -i package-name  # Install a package you downloaded from AUR
 
     $  auric -u package-name  # Update a specific package
     $  auric -u               # Update all packages
