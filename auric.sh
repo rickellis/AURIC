@@ -7,7 +7,7 @@
 #   AUR package manager
 #
 #-----------------------------------------------------------------------------------
-VERSION="1.1.5"
+VERSION="1.1.6"
 #-----------------------------------------------------------------------------------
 #
 # AURIC is mostly just vam with a pretty interface, better version comparison
@@ -40,13 +40,14 @@ GIT_AUR_URL="https://aur.archlinux.org/%s.git"
 # Stripping everything but a-z allows cross-platform reliability.
 GIT_RES_STR="alreadyuptodate"
 
-# Will contain the list of all installed packages. 
-# This gets set automatically
+# Will contain the list of all installed packages. This gets set automatically
 LOCAL_PKGS=""
 
-# Name of installed JSON parser.
-# This gets set automatically.
+# Name of installed JSON parser. This gets set automatically.
 JSON_PARSER=""
+
+# Whether a package is a dependency. This gets set automatically.
+IS_DEPEND=false
 
 # Array containg all successfully downloaded packages.
 # If this contains package names AURIC will prompt
@@ -130,9 +131,16 @@ download() {
         fi
 
         # Did the package query return a valid result?
-        # If not it means the package is not in the AUR
         if [[ $json_result == "[]" ]]; then
-            echo -e "${red}MISSING:${reset} ${cyan}${PKG}${reset} ${red}not in AUR. ${reset} ${yellow}Makepkg will resolve all non-AUR dependencies${reset}"
+
+            # If it's a non-AUR dependency we inform them that makepkg will deal with this
+            if [[ $IS_DEPEND == true ]]; then
+                echo -e "${red}NON-AUR:${reset} ${cyan}${PKG}${reset} is not in the AUR"
+                echo -e "${yellow}Makepkg will resolve this dependency automatically during installation${reset}"
+            else
+                echo -e "${red}MISSING:${reset} ${cyan}${PKG}${reset} is not in the AUR"
+                echo -e "${yellow}Check package name spelling or us pacman to search in the offical Arch repoitories${reset}"
+            fi
         else
 
             # If a folder with the package name exists in the local repo we skip it
@@ -162,6 +170,7 @@ download() {
                 echo -e "${red}PROBLEM:${reset} An unknown error occurred. ${PKG} not downloaded"
                 continue
             fi
+            echo
 
             # Add the package to the install array
             TO_INSTALL+=("$PKG")
@@ -195,11 +204,14 @@ download() {
 
                     # Download it
                     if [[ "$?" == 1 ]]; then
+                        IS_DEPEND=true
                         download "$depend"
                     fi
+                    IS_DEPEND=false
                 done
             fi
         fi
+        echo
     done
 }
 
@@ -273,7 +285,8 @@ update() {
         done
     else
         doupdate $1
-    fi 
+    fi
+    echo
 }
 
 # ----------------------------------------------------------------------------------
@@ -290,47 +303,46 @@ doupdate() {
     fi
 
     cd ${AURDIR}/${PKG} || exit
-
-    GITRESULT=$(git pull 2> /dev/null)
+    git_result=$(git pull 2> /dev/null)
 
     # Get the version number of the currently installed package
-    LOCALVER=$(pacman -Q $PKG)
+    local_pkgver=$(pacman -Q $PKG)
 
     # Remove the package name, leaving only the version number
-    LOCALVER=$(echo $LOCALVER | sed "s/${PKG} //")
+    local_pkgver=$(echo $local_pkgver | sed "s/${PKG} //")
 
     # Open PKGBUILD to get the new version number and release number
-    NEWVER=$(grep -r "^pkgver=+*" PKGBUILD)
-    NEWREL=$(grep -r "^pkgrel=+*" PKGBUILD)
+    pkgver=$(grep -r "^pkgver=+*" PKGBUILD)
+    pkgrel=$(grep -r "^pkgrel=+*" PKGBUILD)
 
     # Remove quotes
-    NEWVER=$(echo $NEWVER | sed "s/['\"]//g")
-    NEWREL=$(echo $NEWREL | sed "s/['\"]//g")
+    pkgver=$(echo $pkgver | sed "s/['\"]//g")
+    pkgrel=$(echo $pkgrel | sed "s/['\"]//g")
 
     # Remove pkgver= and pkgrel=
-    NEWVER=$(echo $NEWVER | sed "s/pkgver=//")
-    NEWREL=$(echo $NEWREL | sed "s/pkgrel=//")
+    pkgver=$(echo $pkgver | sed "s/pkgver=//")
+    pkgrel=$(echo $pkgrel | sed "s/pkgrel=//")
 
-    # Strip variables
-    NEWVER=$(echo $NEWVER | sed "s/\$[{]*[_a-zA-Z0-9]*[}]*//g")
-    NEWREL=$(echo $NEWREL | sed "s/\$[{]*[_a-zA-Z0-9]*[}]*//g")
+    # Strip variables. The pkgver or pkgrel variables in PKGBUILD occasionally 
+    # contain variables. Ascertainning the value of those variables would 
+    # be a pain in the ass. Rather than doing that, the simple solution is to
+    # remove them so we can condionally decide whether to use vercmp or git pull.
+    pkgver=$(echo $pkgver | sed "s/\$[{]*[_a-zA-Z0-9]*[}]*//g")
+    pkgrel=$(echo $pkgrel | sed "s/\$[{]*[_a-zA-Z0-9]*[}]*//g")
 
-    # If NEWVER or NEWRL is blank it means that either pkgver= or pgkrel= in PKGBUILD
-    # contained a variable. Rather than trying to parse out the values of those variables,
-    # we will instead use the git pull result. This has one major downside: If the
-    # user doesn't immediately install the new package, the next time the update function
-    # gets run the package will show as being up to date even though the installed one
-    # is older. If the PKGBUILD file does not contain variables in pkgver= or pgkrel= 
-    # we can do an actual version comparison using vercmp every time that update is run.
-    # If we can't use vercmp we issue a warning that they need to install immediately.
-    # Here we conditionally select which method of comparison to use:
-    if [[ -z $NEWVER ]] || [[ -z $NEWREL ]]; then
+    # Combine pkgver and pkgrel into the new full version number for comparison
+    if [[ ! -z $pkgrel ]]; then
+        new_pkgver="${pkgver}-${pkgrel}"
+    else
+        new_pkgver="${pkgver}"
+    fi    
 
-        # Format the result string for reliability
-        GITRESULT=${GITRESULT,,}   # lowercase
-        GITRESULT=$(echo $GITRESULT | sed "s/[^a-z]//g") # Remove all non a-z
+    # If pkgver or pkgrel are empty we use git pull to determine if a new version is available
+    if [[ -z $pkgver ]] || [[ -z $pkgrel ]]; then
+        git_result=${git_result,,}   # lowercase
+        git_result=$(echo $git_result | sed "s/[^a-z]//g") # Remove all non a-z
 
-        if [[ $GITRESULT != "$GIT_RES_STR" ]]; then
+        if [[ $git_result != "$GIT_RES_STR" ]]; then
             must_update=true
             message="A new version of ${PKG} is avaiable."
             msgxtra="IMPORTANT: Update this package immediately. Unable to use version comparison so\n"
@@ -340,13 +352,9 @@ doupdate() {
             message="PACKAGE: ${PKG}"
             msgxtra=""
         fi
-
-    elif [[ $(vercmp $NEWVER $LOCALVER) -eq 1 ]]; then
+    elif [[ $(vercmp $new_pkgver $local_pkgver) -eq 1 ]]; then
         must_update=true
-        if [[ ! -z $NEWREL ]]; then
-            NEWVER="${NEWVER}-${NEWREL}"
-        fi
-        message="${PKG} ${NEWVER} is available"
+        message="${PKG} ${pkgver} is available"
         msgxtra=""
     else
         must_update=false
@@ -466,6 +474,7 @@ function version() {
 
 # ----------------------------------------------------------------------------------
 
+# A little space to get things going...
 echo
 
 # Is jq or jshon installed? 
@@ -547,8 +556,13 @@ esac
 
 # If the TO_INSTALL array contains package names we offer to install them
 if [[ ${#TO_INSTALL[@]} -gt 0 ]]; then
-    echo
-    echo "Would you like to install the packages?" 
+
+    if [[ ${#TO_INSTALL[@]} == 1 ]]; then
+        echo "Would you like to install the package?"
+    else
+        echo "Would you like to install the packages?"
+    fi 
+    
     echo
     for PKG in ${TO_INSTALL[@]}; do
         echo -e "  ${cyan}${PKG}${reset}"
