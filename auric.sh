@@ -7,7 +7,7 @@
 #   AUR package manager
 #
 #-----------------------------------------------------------------------------------
-VERSION="1.1.3"
+VERSION="1.1.4"
 #-----------------------------------------------------------------------------------
 #
 # AURIC is mostly just vam with a pretty interface, better version comparison
@@ -331,10 +331,13 @@ doupdate() {
 
         if [[ $GITRESULT != "$GIT_RES_STR" ]]; then
             MUST_UPDATE=true
-            MESSAGE="A new version of ${PKG} is avaialbe"
+            MESSAGE="A new version of ${PKG} is avaiable."
+            MSGXTRA="IMPORTANT: Update this package immediately. Unable to use version comparison so\n"
+            MSGXTRA+="any subsequent git pulls will show the package as being current even if it isn't"
         else
             MUST_UPDATE=false
             MESSAGE="PACKAGE: ${PKG}"
+            MSGXTRA=""
         fi
 
     elif [[ $(vercmp $NEWVER $LOCALVER) -eq 1 ]]; then
@@ -343,15 +346,18 @@ doupdate() {
             NEWVER="${NEWVER}-${NEWREL}"
         fi
         MESSAGE="${PKG} ${NEWVER} is available"
+        MSGXTRA=""
     else
         MUST_UPDATE=false
         MESSAGE="PACKAGE: ${PKG}"
+        MSGXTRA=""
     fi
 
     # Show the user the restult
     if [[ $MUST_UPDATE == true ]]; then
         echo -e "${yellow}UPDATE: ${MESSAGE}${reset}"
         echo -e "${green}PKGBLD: Build files have been downloaded. ${PKG} is ready to be reinstalled${reset}"
+        echo -e "${red}${MSGXTRA}${reset}"
         TO_INSTALL+=("$PKG")
     else
         echo -e "${MESSAGE}"
