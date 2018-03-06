@@ -5,9 +5,6 @@ Minimalist Arch User Repository package manager based on vam.
 
 AURIC is mostly just __[vam](https://github.com/calebabutler/vam)__ with a pretty interface, better version comparison handling, package installation, search keyword coloring, JSON parsing using either jq or jshon, and a few additional features. 
 
-
-Caleb Butler does an excellent job of describing how to use git pulls to manage AUR packages. His script is bare bones, so I built it into something I'd want to use.
-
 The name AURIC is a play on two words: AUR and Rick. It's also the name of the main antagonist in the James Bond film Goldfinger.
 
 ## Background Info
