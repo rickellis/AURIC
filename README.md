@@ -25,7 +25,7 @@ AURIC started life as my desire to write a shell script that automates the above
 
 The one major downside to using a `git pull` to determine if a package is out of date is this: You can only do a git pull once to determine if a package is out of date. Since the pull updates your local repo, subsequent calls to `git pull` will show the package as being current--even if you didn't actually run `makepkg` to update the package. In other words, you might have applications that are out of date even though git thinks you are current.
 
-So better version comparison was one thing I wanted to solve in AURIC. I also wanted it to handle the package installation. I also added much more thorough error handling and a few other things, like automated migration of currently installed packages to git management.
+So better version comparison was one thing I wanted to solve in AURIC, and I wanted it to handle the package installation. Along the way I also added much more thorough error handling and a few other things, like automated migration of currently installed packages to git management.
 
 Should you use AURIC? If you are happy with your current package manager I would say no. If you are looking for something extremely simple that helps automate the tasks you are already comfortable doing, then you might give it a try.
 
