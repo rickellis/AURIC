@@ -48,6 +48,14 @@ Should you use AURIC? If you are happy with your current package manager I would
 
     $  auric -v               # Show version number
 
+## Terminal Shortcut
+To make running the script more convenient you can add the following alias to your __.bashrc__ file, and then just enter the various __auric__ commands from your terminal without having to traverse into the AURIC directory.
+
+    # AURIC AUR Helper
+    function auric() {
+        /path/to/AURIC/auric.sh $@
+    }
+
 ## License
 
 MIT
