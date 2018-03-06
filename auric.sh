@@ -322,6 +322,7 @@ doupdate() {
     # gets run the package will show as being up to date even though the installed one
     # is older. If the PKGBUILD file does not contain variables in pkgver= or pgkrel= 
     # we can do an actual version comparison using vercmp every time that update is run.
+    # If we can't use vercmp we issue a warning that they need to install immediately.
     # Here we conditionally select which method of comparison to use:
     if [[ -z $NEWVER ]] || [[ -z $NEWREL ]]; then
 
