@@ -25,7 +25,7 @@ Definitely easier, but if the package contains dependencies that are not from th
 
 AURIC started life as my desire to write a shell script that automates the above process. When I stumbled onto vam I realized that someone else had a similar idea and had written the core functionality. I took that script an built it into AURIC.
 
-The one major downside to using a `git pull` to determine if a package is out of date is this: You can only do a git pull once to determine if a package is out of date. Since the pull updates your local repo, subsequent calls to `git pull` will show the package as being current--even if you didn't actually run `makepkg` to update the package. In other words, you might have applications that are out of date even though git thinks you are current.
+The one major downside to using a `git pull` to determine if a package is out of date is this: You can only do a git pull once to determine if a package is out of date. Since the pull updates your local repo, subsequent calls to `git pull` will show the package as being current--even if you didn't actually run `makepkg`. In other words, you might have applications that are out of date even though git thinks you are current.
 
 So better version comparison was one thing I wanted to solve in AURIC. I also wanted it to handle the package installation. Along the way I added much more thorough error handling and a few other things, like automated migration of currently installed packages to AURIC management.
 
