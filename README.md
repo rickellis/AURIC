@@ -23,7 +23,7 @@ After the AUR moved everything to github the process got simpler: Instead of man
 
 Definitely easier, but if the package contains dependencies that are not from the official repositories (`makepkg` resolves all pacman dependencies automatically) then you still have to manage them yourself.
 
-AURIC started life as my desire to write a shell script that automates the above process. When I stumbled onto vam I realized that someone else had a similar idea and had written the core functionality. I took that script an built it into AURIC.
+AURIC started life as my desire to write a shell script that automates the above process. When I stumbled onto vam I realized that someone else had a similar idea and had written the core functionality. I took that script and built it into AURIC.
 
 The one major downside to using a `git pull` to determine if a package is out of date is this: You can only do a git pull once. Since the pull updates your local repo, subsequent pulls will show the package as being current, even if you didn't actually run `makepkg`. In other words, you might have applications that are out of date even though git thinks you are current.
 
