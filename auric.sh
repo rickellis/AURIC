@@ -363,13 +363,14 @@ doupdate() {
         new_pkgver="${pkgver}"
     fi
 
+    echo -e "PACKAGE: ${PKG}"
+
     if [[ $(vercmp $new_pkgver $local_pkgver) -eq 1 ]]; then
         echo -e "${green}NEW VER: ${PKG} ${pkgver} is available${reset}"
         echo -e "${yellow}PKG BLD: Build files have been downloaded. ${PKG} is ready to be reinstalled${reset}" 
 
         TO_INSTALL+=("$PKG")
     else
-        echo -e "PACKAGE: ${PKG}"
         echo -e "${cyan}CURRENT: ${PKG} is up to date${reset}"
     fi
 }
