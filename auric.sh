@@ -7,7 +7,7 @@
 #   AUR package manager
 #
 #-----------------------------------------------------------------------------------
-VERSION="1.2.6"
+VERSION="1.2.7"
 #-----------------------------------------------------------------------------------
 #
 # AURIC is a fork of vam with a pretty interface, SRCINFO version comparison,
@@ -75,7 +75,8 @@ fi
 help() {
     echo 
     echo -e "auric -d package-name\t# Download a package"
-    echo -e "auric -i package-name\t# Install a downloaded package"
+    echo -e "auric -i package-name\t# Installs package if local version exists."
+    echo -e "\t\t\t# If package does not exist it hands it off to auric -d package-name"
     echo -e "auric -u package-name\t# Update a package"
     echo -e "auric -u \t\t# Update all installed packages"
     echo -e "auric -s package-name\t# Search for a package"
