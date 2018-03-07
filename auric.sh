@@ -7,18 +7,18 @@
 #   AUR package manager
 #
 #-----------------------------------------------------------------------------------
-VERSION="1.1.7"
+VERSION="1.2.0"
 #-----------------------------------------------------------------------------------
 #
-# AURIC is mostly just vam with a pretty interface, better version comparison
-# handling, package installation, search keyword coloring, 
+# AURIC is a fork of vam with a pretty interface, SRCINFO version comparison,
+# package installation (with PKGBUILD auditing), search keyword coloring, 
 # JSON parsing using either jq or jshon, and a few additional features
 #
 # The name AURIC is a play on two words: AUR and Rick. It's also the name
 # of the main antagonist in the James Bond film Goldfinger.
 #-----------------------------------------------------------------------------------
-# Authors   :   Rick Ellis      https://github.com/rickellis/AURIC
-#           :   Caleb Butler    https://github.com/calebabutler/vam        
+# Authors   :   AURIC :  Rick Ellis      https://github.com/rickellis/AURIC
+#           :   VAM   :  Caleb Butler    https://github.com/calebabutler/vam        
 # License   :   MIT
 #-----------------------------------------------------------------------------------
 
@@ -33,12 +33,6 @@ AUR_SRCH_URL="https://aur.archlinux.org/rpc/?v=5&type=search&by=name&arg="
 
 # GIT URL for AUR repos. %s will be replaced with package name
 GIT_AUR_URL="https://aur.archlinux.org/%s.git"
-
-# Successful git pull result - lowercase with no spaces, dashes, or punctuation.
-# On MacOS a git pull results in: Already up-to-date.
-# On Linux a git pull results in: Already up to date.
-# Stripping everything but a-z allows cross-platform reliability.
-GIT_RES_STR="alreadyuptodate"
 
 # Will contain the list of all installed packages. This gets set automatically
 LOCAL_PKGS=""
@@ -132,14 +126,15 @@ download() {
 
         # Did the package query return a valid result?
         if [[ $json_result == "[]" ]]; then
-
             # If it's a non-AUR dependency we inform them that makepkg will deal with this
             if [[ $IS_DEPEND == true ]]; then
+                echo
                 echo -e "${red}NON-AUR:${reset} ${cyan}${PKG}${reset} is not in the AUR"
                 echo -e "${yellow}Makepkg will resolve this dependency automatically during installation${reset}"
             else
+                echo
                 echo -e "${red}MISSING:${reset} ${cyan}${PKG}${reset} is not in the AUR"
-                echo -e "${yellow}Check package name spelling or us pacman to search in the offical Arch repoitories${reset}"
+                echo -e "${yellow}Check package name spelling or use pacman to search in the offical Arch repoitories${reset}"
             fi
         else
 
@@ -170,7 +165,6 @@ download() {
                 echo -e "${red}PROBLEM:${reset} An unknown error occurred. ${PKG} not downloaded"
                 continue
             fi
-            echo
 
             # Add the package to the install array
             TO_INSTALL+=("$PKG")
@@ -211,7 +205,6 @@ download() {
                 done
             fi
         fi
-        echo
     done
 }
 
@@ -222,12 +215,12 @@ install() {
     validate_pkgname "$1"
     local PKG
     PKG=$1
-    read -p "Are you sure you want to install ${PKG} [Y/n]? " CONSENT 
-    if [[ $CONSENT =~ [y|Y] ]]; then
-        doinstall $PKG
-    else
+    read -p "Are you sure you want to install ${PKG} [Y/n]? " CONSENT
+    if [[ ! -z $CONSENT ]] && [[ ! $CONSENT =~ [y|Y] ]]; then
         echo
         echo "Goodbye..."
+    else
+        doinstall $PKG
     fi
 }
 
@@ -256,6 +249,26 @@ doinstall() {
         exit 1
     fi
 
+    read -p "Before installing, do you want to audit the PKGBUILD file? [Y/n] " AUDIT
+
+    if [[ ! $AUDIT =~ [y|Y] ]] && [[ ! $AUDIT =~ [n|N] ]] && [[ ! -z $AUDIT ]]; then
+        echo
+        echo "Invalid entry. Aborting..."
+        return 0
+    fi
+
+    if [[ -z $AUDIT ]] || [[ $AUDIT =~ [y|Y] ]]; then
+        nano PKGBUILD
+        echo
+        read -p "Continue installing? [Y/n] " CONSENT
+        if [[ ! -z $CONSENT ]] && [[ ! $CONSENT =~ [y|Y] ]]; then
+            echo
+            echo "Goodbye..."
+            return 0
+         fi
+    fi
+
+    echo
     echo -e "RUNNING MAKEPKG ON ${cyan}${PKG}${reset}"
     echo
 
@@ -273,17 +286,17 @@ doinstall() {
 update() {
     cd "$AURDIR" || exit
     echo "CHECKING FOR UPDATES"
-    echo    
     if [[ -z $1 ]]; then
         for DIR in ./*; do
+            echo
             # Extract the package name from the directory path
             DIR=${DIR//\//}
             DIR=${DIR//./}
             doupdate $DIR
-            echo
             cd ..
         done
     else
+        echo
         doupdate $1
     fi
 }
@@ -309,22 +322,16 @@ doupdate() {
 
     # Remove the package name, leaving only the version/release number
     local_pkgver=$(echo $local_pkgver | sed "s/${PKG} //")
+    local_pkgver=$(echo $local_pkgver | sed "s/[ ]//")
 
-    # Open .SRCINFO and capture pkgver="123" and pkgrel="1"
-    pkgver=$(grep -o "\bpkgver[[:blank:]]*=[[:blank:]]*.*" .SRCINFO)
-    pkgrel=$(grep -o "\pkgrel[[:blank:]]*=[[:blank:]]*.*" .SRCINFO)
+    # Open .SRCINFO and get the version/release numbers
+    # for comparison with the installed version
+    pkgver=$(sed -n 's/pkgver[ ]*=//p'  .SRCINFO)
+    pkgrel=$(sed -n 's/pkgrel[ ]*=//p'  .SRCINFO)
 
-    # Remove pkgver= and pkgrel= leaving only the values 
-    pkgver=$(echo $pkgver | sed "s/pkgver[[:blank:]]*=[[:blank:]]//")
-    pkgrel=$(echo $pkgrel | sed "s/pkgrel[[:blank:]]*=[[:blank:]]//")
-
-    # Remove quotes. Probably not necessary
-    pkgver=$(echo $pkgver | sed "s/['\"]//g")
-    pkgrel=$(echo $pkgrel | sed "s/['\"]//g")
-
-    # Kill stray spaces. Probably not necessary
-    pkgver=${pkgver// /}
-    pkgrel=${pkgrel// /}
+    # Kill stray spaces
+    pkgver=$(echo $pkgver | sed "s/[ ]//")
+    pkgrel=$(echo $pkgrel | sed "s/[ ]//")
 
     # Combine pkgver and pkgrel into the new full version number for comparison
     if [[ ! -z $pkgrel ]]; then
@@ -526,7 +533,7 @@ esac
 
 # If the TO_INSTALL array contains package names we offer to install them
 if [[ ${#TO_INSTALL[@]} -gt 0 ]]; then
-
+    echo
     if [[ ${#TO_INSTALL[@]} == 1 ]]; then
         echo "Would you like to install the package?"
     else
@@ -540,16 +547,16 @@ if [[ ${#TO_INSTALL[@]} -gt 0 ]]; then
     echo
     read -p "ENTER [Y/n] " CONSENT
 
-    if [[ $CONSENT =~ [y|Y] ]]; then
+    if [[ ! -z $CONSENT ]] && [[ ! $CONSENT =~ [y|Y] ]]; then
+        echo
+        echo "Goodbye..."
+    else
         # Run through the install array in reverse order.
         # This helps ensure that dependencies get installed first.
         # The order doesn't matter after updating, only downloading
         for (( i=${#TO_INSTALL[@]}-1 ; i>=0 ; i-- )) ; do
             doinstall "${TO_INSTALL[i]}"
         done
-    else
-        echo
-        echo "Goodbye..."
     fi
 fi
 echo
