@@ -3,7 +3,7 @@ Minimalist Arch User Repository package manager based on vam.
 
 <img src="https://i.imgur.com/klpv9KP.png" />
 
-AURIC is mostly just __[vam](https://github.com/calebabutler/vam)__ with a pretty interface, better version comparison handling, package installation, search keyword coloring, JSON parsing using either jq or jshon, and a few additional features. 
+AURIC is a fork of __[vam](https://github.com/calebabutler/vam)__ with a pretty interface, SRCINFO version comparison for better reliability, package installation (with PKGBUILD auditing), search keyword coloring, JSON parsing using either jq or jshon, and a few additional features. 
 
 The name AURIC is a play on two words: AUR and Rick. It's also the name of the main antagonist in the James Bond film Goldfinger.
 
@@ -27,7 +27,7 @@ AURIC started life as my desire to write a shell script that automates the above
 
 The one major downside to using a `git pull` to determine if a package is out of date is this: You can only do a git pull once to determine if a package is out of date. Since the pull updates your local repo, subsequent calls to `git pull` will show the package as being current--even if you didn't actually run `makepkg`. In other words, you might have applications that are out of date even though git thinks you are current.
 
-So better version comparison was one thing I wanted to solve in AURIC. I also wanted it to handle the package installation. Along the way I added much more thorough error handling and a few other things, like automated migration of currently installed packages to AURIC management.
+So better version comparison was one thing I wanted to solve in AURIC. I did that by using the SRCINFO file data and comparing it to the installed version number. I also wanted it to handle the package installation (and with that, PKGBUILD auditing). Along the way I added much more thorough error handling and a few other things, like automated migration of currently installed packages to AURIC and support for jq and jshon parsing.
 
 Should you use AURIC? If you are happy with your current package manager I would say no. If you are looking for something extremely simple that helps automate the tasks you are already comfortable doing, then you might give it a try.
 
