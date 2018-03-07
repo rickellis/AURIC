@@ -7,7 +7,7 @@
 #   AUR package manager
 #
 #-----------------------------------------------------------------------------------
-VERSION="1.2.5"
+VERSION="1.2.6"
 #-----------------------------------------------------------------------------------
 #
 # AURIC is a fork of vam with a pretty interface, SRCINFO version comparison,
@@ -237,6 +237,13 @@ install() {
     validate_pkgname "$1"
     local PKG
     PKG=$1
+
+    # If the local package doesn't exist we hand off the task to the download function
+    if [[ ! -d "${AURDIR}/${PKG}" ]]; then
+        download $PKG
+        return 0
+    fi
+
     read -p "Are you sure you want to install ${PKG} [Y/n]? " CONSENT
     if [[ ! -z $CONSENT ]] && [[ ! $CONSENT =~ [y|Y] ]]; then
         echo
@@ -254,13 +261,7 @@ doinstall() {
     validate_pkgname "$1"
     local PKG
     PKG=$1
-
     echo
-    if [[ ! -d "${AURDIR}/${PKG}" ]]; then
-        echo -e "${red}MISSING:${reset} Package does not exist in local repo"
-        echo
-        exit 1
-    fi
 
     cd ${AURDIR}/${PKG}
 
@@ -558,6 +559,7 @@ esac
 # If the TO_INSTALL array contains package names we offer to install them
 if [[ ${#TO_INSTALL[@]} -gt 0 ]]; then
     echo
+
     if [[ ${#TO_INSTALL[@]} == 1 ]]; then
         echo "Would you like to install the package?"
     else
