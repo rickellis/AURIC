@@ -37,7 +37,9 @@ Should you use AURIC? If you are happy with your current package manager I would
 
     $  auric -d package-name  # Download a package
 
-    $  auric -i package-name  # Install a package you downloaded from AUR
+    $  auric -i package-name  # Install a package. If a local package exists it will
+                              # install it. If it doesn't exist it hands off the task
+                              # to auric -d package-name then installs it
 
     $  auric -u package-name  # Check for updates on a specific package
     $  auric -u               # Check for updates on all packages
