@@ -8,7 +8,7 @@ AURIC is a fork of __[vam](https://github.com/calebabutler/vam)__ with a pretty 
 The name AURIC is a play on two words: AUR and Rick. It's also the name of the main antagonist in the James Bond film Goldfinger.
 
 ## Background Info
-There are two basic ways to install and update packages from the Arch User Repository: Use a package manager or do it manually. If you are a new Arch Linux user, you should always use the latter method before settling on one of the many available package managers, as this will give you much more insight.
+There are two basic ways to install and update packages from the Arch User Repository: Use a package manager or do it manually. If you are a new Arch Linux user, you should always use the later method before settling on one of the many available package managers, as this will better equip you to run Arch.
 
 So how do you install packages manually? The classic way prior to AUR moving to github was this:
 
@@ -27,7 +27,7 @@ AURIC started life as my desire to write a shell script that automates the above
 
 The one major downside to using a `git pull` to determine if a package is out of date is this: You can only do a git pull once to determine if a package is out of date. Since the pull updates your local repo, subsequent calls to `git pull` will show the package as being current--even if you didn't actually run `makepkg`. In other words, you might have applications that are out of date even though git thinks you are current.
 
-So better version comparison was one thing I wanted to solve in AURIC. I did that by using the SRCINFO file data and comparing it to the installed version number. I also wanted it to handle the package installation (and with that, PKGBUILD auditing). Along the way I added much more thorough error handling and a few other things, like automated migration of currently installed packages to AURIC and support for jq and jshon parsing.
+So better version comparison was one thing I wanted to solve in AURIC. I did that by using the SRCINFO file data and comparing it to the installed version number. I also wanted it to handle the package installation (and with that, PKGBUILD auditing). Along the way I added much more thorough error handling and a few other things, like automated migration of currently installed packages to AURIC and support for jq and jshon parsing.1
 
 Should you use AURIC? If you are happy with your current package manager I would say no. If you are looking for something extremely simple that helps automate the tasks you are already comfortable doing, then you might give it a try.
 
