@@ -7,7 +7,7 @@
 #   AUR package manager
 #
 #-----------------------------------------------------------------------------------
-VERSION="1.1.6"
+VERSION="1.1.7"
 #-----------------------------------------------------------------------------------
 #
 # AURIC is mostly just vam with a pretty interface, better version comparison
@@ -286,12 +286,11 @@ update() {
     else
         doupdate $1
     fi
-    echo
 }
 
 # ----------------------------------------------------------------------------------
 
-# Perform the upate routine
+# Perform the upddate routine
 doupdate() {
     local PKG
     PKG=$1
@@ -303,73 +302,44 @@ doupdate() {
     fi
 
     cd ${AURDIR}/${PKG} || exit
-    git_result=$(git pull 2> /dev/null)
+    git pull >/dev/null 2>&1
 
     # Get the version number of the currently installed package
     local_pkgver=$(pacman -Q $PKG)
 
-    # Remove the package name, leaving only the version number
+    # Remove the package name, leaving only the version/release number
     local_pkgver=$(echo $local_pkgver | sed "s/${PKG} //")
 
-    # Open PKGBUILD to get the new version number and release number
-    pkgver=$(grep -r "^pkgver=+*" PKGBUILD)
-    pkgrel=$(grep -r "^pkgrel=+*" PKGBUILD)
+    # Open .SRCINFO and capture pkgver="123" and pkgrel="1"
+    pkgver=$(grep -o "\bpkgver[[:blank:]]*=[[:blank:]]*.*" .SRCINFO)
+    pkgrel=$(grep -o "\pkgrel[[:blank:]]*=[[:blank:]]*.*" .SRCINFO)
 
-    # Remove quotes
+    # Remove pkgver= and pkgrel= leaving only the values 
+    pkgver=$(echo $pkgver | sed "s/pkgver[[:blank:]]*=[[:blank:]]//")
+    pkgrel=$(echo $pkgrel | sed "s/pkgrel[[:blank:]]*=[[:blank:]]//")
+
+    # Remove quotes. Probably not necessary
     pkgver=$(echo $pkgver | sed "s/['\"]//g")
     pkgrel=$(echo $pkgrel | sed "s/['\"]//g")
 
-    # Remove pkgver= and pkgrel=
-    pkgver=$(echo $pkgver | sed "s/pkgver=//")
-    pkgrel=$(echo $pkgrel | sed "s/pkgrel=//")
-
-    # Strip variables. The pkgver or pkgrel variables in PKGBUILD occasionally 
-    # contain variables. Ascertainning the value of those variables would 
-    # be a pain in the ass. Rather than doing that, the simple solution is to
-    # remove them so we can condionally decide whether to use vercmp or git pull.
-    pkgver=$(echo $pkgver | sed "s/\$[{]*[_a-zA-Z0-9]*[}]*//g")
-    pkgrel=$(echo $pkgrel | sed "s/\$[{]*[_a-zA-Z0-9]*[}]*//g")
+    # Kill stray spaces. Probably not necessary
+    pkgver=${pkgver// /}
+    pkgrel=${pkgrel// /}
 
     # Combine pkgver and pkgrel into the new full version number for comparison
     if [[ ! -z $pkgrel ]]; then
         new_pkgver="${pkgver}-${pkgrel}"
     else
         new_pkgver="${pkgver}"
-    fi    
-
-    # If pkgver or pkgrel are empty we use git pull to determine if a new version is available
-    if [[ -z $pkgver ]] || [[ -z $pkgrel ]]; then
-        git_result=${git_result,,}   # lowercase
-        git_result=$(echo $git_result | sed "s/[^a-z]//g") # Remove all non a-z
-
-        if [[ $git_result != "$GIT_RES_STR" ]]; then
-            must_update=true
-            message="A new version of ${PKG} is avaiable."
-            msgxtra="IMPORTANT: Update this package immediately. Unable to use version comparison so\n"
-            msgxtra+="any subsequent git pulls will show the package as being current even if it isn't"
-        else
-            must_update=false
-            message="PACKAGE: ${PKG}"
-            msgxtra=""
-        fi
-    elif [[ $(vercmp $new_pkgver $local_pkgver) -eq 1 ]]; then
-        must_update=true
-        message="${PKG} ${pkgver} is available"
-        msgxtra=""
-    else
-        must_update=false
-        message="PACKAGE: ${PKG}"
-        msgxtra=""
     fi
 
-    # Show the user the restult
-    if [[ $must_update == true ]]; then
-        echo -e "${green}UPDATE: ${message}${reset}"
-        echo -e "${yellow}PKGBLD: Build files have been downloaded. ${PKG} is ready to be reinstalled${reset}"
-        echo -e "${red}${msgxtra}${reset}"
+    if [[ $(vercmp $new_pkgver $local_pkgver) -eq 1 ]]; then
+        echo -e "${green}UPDATE: ${PKG} ${pkgver} is available${reset}"
+        echo -e "${yellow}PKGBLD: Build files have been downloaded. ${PKG} is ready to be reinstalled${reset}" 
+
         TO_INSTALL+=("$PKG")
     else
-        echo -e "${message}"
+        echo -e "PACKAGE: ${PKG}"
         echo -e "${cyan}CURRENT: ${PKG} is up to date${reset}"
     fi
 }
