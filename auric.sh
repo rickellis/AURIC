@@ -7,7 +7,7 @@
 #   AUR package manager
 #
 #-----------------------------------------------------------------------------------
-VERSION="1.2.0"
+VERSION="1.2.1"
 #-----------------------------------------------------------------------------------
 #
 # AURIC is a fork of vam with a pretty interface, SRCINFO version comparison,
@@ -341,8 +341,8 @@ doupdate() {
     fi
 
     if [[ $(vercmp $new_pkgver $local_pkgver) -eq 1 ]]; then
-        echo -e "${green}UPDATE: ${PKG} ${pkgver} is available${reset}"
-        echo -e "${yellow}PKGBLD: Build files have been downloaded. ${PKG} is ready to be reinstalled${reset}" 
+        echo -e "${green}NEW VER: ${PKG} ${pkgver} is available${reset}"
+        echo -e "${yellow}PKG BLD: Build files have been downloaded. ${PKG} is ready to be reinstalled${reset}" 
 
         TO_INSTALL+=("$PKG")
     else
