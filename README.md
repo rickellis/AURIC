@@ -1,7 +1,7 @@
 # AURIC
 Minimalist Arch User Repository package manager based on vam.
 
-<img src="https://i.imgur.com/udzGp3W.png" />
+<img src="https://i.imgur.com/mgxQwZS.png" />
 
 AURIC is a fork of __[vam](https://github.com/calebabutler/vam)__ with a pretty interface, SRCINFO version comparison for better reliability, package installation (with PKGBUILD auditing), search keyword coloring, JSON parsing using either jq or jshon, and a few additional features. 
 
