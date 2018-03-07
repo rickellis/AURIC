@@ -7,7 +7,7 @@
 #   AUR package manager
 #
 #-----------------------------------------------------------------------------------
-VERSION="1.2.1"
+VERSION="1.2.5"
 #-----------------------------------------------------------------------------------
 #
 # AURIC is a fork of vam with a pretty interface, SRCINFO version comparison,
@@ -22,7 +22,7 @@ VERSION="1.2.1"
 # License   :   MIT
 #-----------------------------------------------------------------------------------
 
-# Local AUR git repo
+# Name of local AUR git repo directory
 AURDIR="$HOME/.AUR"
 
 # AUR package info URL
@@ -42,6 +42,11 @@ JSON_PARSER=""
 
 # Whether a package is a dependency. This gets set automatically.
 IS_DEPEND=false
+
+# Flag gets set during migration to ignore dependencies since 
+# these will already have been installed previously
+# This gets set automatically.
+IS_MIGRATING=false
 
 # Array containg all successfully downloaded packages.
 # If this contains package names AURIC will prompt
@@ -126,21 +131,30 @@ download() {
 
         # Did the package query return a valid result?
         if [[ $json_result == "[]" ]]; then
+
+            # Presumably, if the user is migrating existing packages to AURIC
+            # all the dependencies will already be installed. We don't need
+            # to issue warnings in that case
+            if [[ $IS_MIGRATING == true ]]; then
+                continue
+            fi
+
             # If it's a non-AUR dependency we inform them that makepkg will deal with this
             if [[ $IS_DEPEND == true ]]; then
-                echo
                 echo -e "${red}NON-AUR:${reset} ${cyan}${PKG}${reset} is not in the AUR"
                 echo -e "${yellow}Makepkg will resolve this dependency automatically during installation${reset}"
-            else
                 echo
+            else
                 echo -e "${red}MISSING:${reset} ${cyan}${PKG}${reset} is not in the AUR"
                 echo -e "${yellow}Check package name spelling or use pacman to search in the offical Arch repoitories${reset}"
+                echo
             fi
         else
 
             # If a folder with the package name exists in the local repo we skip it
             if [[ -d "$PKG" ]]; then
                 echo -e "${red}PKGSKIP:${reset} ${cyan}${PKG}${reset} already exists in local repo"
+                echo
                 continue
             fi
 
@@ -155,16 +169,24 @@ download() {
             # Was the clone successful?
             if [[ "$?" -ne 0 ]]; then
                 echo -e "${red}FAILURE:${reset} Unable to clone. Git error code: ${?}"
+                echo
                 continue
             fi
 
             # Extra precaution: We make sure the package folder was created in the local repo
             if [[ -d "$PKG" ]]; then
                 echo -e "${green}SUCCESS:${reset} ${PKG} cloned"
+                echo
             else
                 echo -e "${red}PROBLEM:${reset} An unknown error occurred. ${PKG} not downloaded"
+                echo
                 continue
             fi
+
+            # We don't bother with dependencies during migration since they'll already be installed
+            if [[ $IS_MIGRATING == true ]]; then
+                continue
+            fi            
 
             # Add the package to the install array
             TO_INSTALL+=("$PKG")
@@ -393,10 +415,12 @@ migrate() {
     echo "MIGRATING INSTALLED AUR PACKAGES TO AURIC"
     echo
     AURPKGS=$(pacman -Qm | awk '{print $1}')
+    IS_MIGRATING=true
     for PKG in $AURPKGS; do
         PKG=${PKG// /}
         download "$PKG"
     done
+    IS_MIGRATING=false
     TO_INSTALL=()
 }
 
