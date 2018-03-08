@@ -35,25 +35,26 @@ Should you use AURIC? If you are happy with your current package manager I would
 
 ## Usage
 
-    $  auric -d package-name  # Download a package
+    $  auric -d  package-name  # Download a package
 
-    $  auric -i package-name  # Install a package. If the local package exists it will
-                              # install it. If it doesn't exist it hands off the task
-                              # to `auric -d package-name` then installs it
+    $  auric -i  package-name  # Install a package if it has been downloaded.
+                               # If local package does not exist it hands it off to auric -d
 
-    $  auric -u package-name  # Check for updates on a specific package
-    $  auric -u               # Check for updates on all packages
+    $  auric -u  package-name  # Check for updates on a specific package
+    $  auric -u                # Check for updates on all packages
 
-    $  auric -s package-name  # Search the AUR repo for a package
+    $  auric -s  package-name  # Search the AUR repo for a package
 
-    $  auric -q               # List all your local AUR packages
+    $  auric -q                # List all your local AUR packages
 
-    $  auric -r package-name  # Remove package. It runs sudo pacman -Rsc and deletes the local git repo
+    $  auric -vl package-name  # Verify that all dependencies for a local package are installed
+    $  auric -vr package-name  # Verify that all dependencies for a remote package are installed
 
-    $  auric -v package-name  # Verify that all dependencies for a local package are installed
+    $  auric -m  package-name  # Migrate a specific package to AURIC
+    $  auric -m                # Migrate all previously installed AUR packages to AURIC
 
-    $  auric -m package-name  # Migrate a specific package to AURIC
-    $  auric -m               # Migrate all previously installed AUR packages to AURIC
+    $  auric -r  package-name  # Remove package. It runs sudo pacman -Rsc and deletes the local git repo
+
 
 ## Terminal Shortcut
 To make running the script more convenient you can add the following alias to your __.bashrc__ file, and then just enter the various __auric__ commands from your terminal without having to traverse into the AURIC directory.
