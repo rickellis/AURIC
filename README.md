@@ -63,11 +63,10 @@ AURIC requires the following packages:
     * Bash 4 or newer
 
 
-## Terminal Shortcut
-To make running the script more convenient you can add the following alias to your __.bashrc__ file, and then just enter the various __auric__ commands from your terminal without having to traverse into the AURIC directory.
+## Terminal Alias
+To make running the script more convenient you can add the following alias to your __.bashrc__ file, and then just enter the various __auric__ commands from your terminal without having to traverse into the auric directory.
 
-    # AURIC AUR Helper
-    function auric() {
+    auric() {
         /path/to/AURIC/auric.sh $@
     }
 
