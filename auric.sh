@@ -271,10 +271,20 @@ install() {
     local PKG
     PKG=$1
 
-    # If the local package doesn't exist we hand off the task to the download function
-    if [[ ! -d "${AURDIR}/${PKG}" ]]; then
+    # If the package isn't currently managed by AURIC...
+    if [[ ! -d ${AURDIR}/${PKG} ]]; then
         download $PKG
         return 0
+    fi
+
+    # Is the package installed on the system?...
+    pacman -Q $PKG  >/dev/null 2>&1
+
+    # Package is installed
+    if [[ "$?" -eq 0 ]]; then
+        echo -e "${red}ERROR: $PKG is already installed${reset}"
+        echo
+        exit 1
     fi
 
     read -p "Are you sure you want to install ${PKG} [Y/n]? " CONSENT
@@ -670,21 +680,68 @@ search() {
 
 # Migrate all previously installed AUR packages to AURIC
 migrate() {
-    IS_MIGRATING=true
+    
+    # No argument, migrate all installed packages
     if [[ -z "$1" ]]; then
         echo "MIGRATING INSTALLED AUR PACKAGES TO AURIC"
         echo
+        IS_MIGRATING=true
         AURPKGS=$(pacman -Qm | awk '{print $1}')
-        
         for PKG in $AURPKGS; do
             PKG=${PKG// /}
             download "$PKG"
         done
-    else
-        echo "MIGRATING $1 TO AURIC"
-        echo
-        download "$1"
+        IS_MIGRATING=false
+        TO_INSTALL=()
+        return 0
     fi
+
+    local PKG
+    PKG=$1
+
+    # If the supplied package name is already managed by AURIC...
+    if [[ -d ${AURDIR}/${PKG} ]]; then
+        echo -e "${red}ERROR: ${PKG} has already been migrated${reset}"
+        echo
+        exit 1
+    fi
+
+    # Before migrating, let's make sure it's an installed AUR package
+    pacman -Q $PKG  >/dev/null 2>&1
+
+    # Package is installed
+    if [[ "$?" -eq 0 ]]; then
+
+        # Search for the package at AUR
+        curl_result=$(curl -fsSk "${AUR_INFO_URL}${PKG}")
+
+        # Parse the result using the installed JSON parser
+        if [[ $JSON_PARSER == 'jq' ]]; then
+            json_result=$(echo "$curl_result" | jq -r '.results')
+        else
+            json_result=$(echo "$curl_result" | jshon -e results)
+        fi
+
+        # Did the package query return a valid result?
+        if [[ $json_result == "[]" ]]; then
+            echo -e "${red}ERROR: $PKG is not an AUR package${reset}"
+            echo
+            echo "Only AUR packages can be migrated to AURIC"
+            echo
+            exit 1
+        fi
+    else
+        echo -e "${red}ERROR: ${PKG} is not installed on your system${reset}"
+        echo
+        echo "Only installed AUR packages can be migrated"
+        echo
+        exit 1
+    fi
+
+    echo "MIGRATING $1 TO AURIC"
+    echo
+    IS_MIGRATING=true
+    download "$1"
     IS_MIGRATING=false
     TO_INSTALL=()
 }
