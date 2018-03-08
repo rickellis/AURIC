@@ -3,7 +3,7 @@ Minimalist Arch User Repository package manager based on vam.
 
 <img src="https://i.imgur.com/mgxQwZS.png" />
 
-AURIC is a fork of __[vam](https://github.com/calebabutler/vam)__ with a pretty interface, SRCINFO version comparison for better reliability, package installation (with PKGBUILD auditing), search keyword coloring, JSON parsing using either jq or jshon, and a few additional features. 
+AURIC is a fork of __[vam](https://github.com/calebabutler/vam)__ with a pretty interface, SRCINFO version comparison for better reliability, package installation (with PKGBUILD auditing), installed dependency verification, search keyword coloring, JSON parsing using either jq or jshon, and a few additional features.
 
 The name AURIC is a play on two words: AUR and Rick. It's also the name of the main antagonist in the James Bond film Goldfinger.
 
@@ -50,9 +50,9 @@ Should you use AURIC? If you are happy with your current package manager I would
 
     $  auric -r package-name  # Remove package. It runs sudo pacman -Rsc and deletes the local git repo
 
-    $  auric -m               # Migrate previously installed AUR packages to AURIC
+    $  auric -v package-name  # Verify that all dependencies for a package are installed
 
-    $  auric -v               # Show version number
+    $  auric -m               # Migrate previously installed AUR packages to AURIC
 
 ## Terminal Shortcut
 To make running the script more convenient you can add the following alias to your __.bashrc__ file, and then just enter the various __auric__ commands from your terminal without having to traverse into the AURIC directory.
