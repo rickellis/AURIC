@@ -17,7 +17,7 @@ So how do you install packages manually? The classic way, prior to AUR moving to
 * Audit the `PKGBUILD` file for security.
 * Run `makepkge` to install it.
 
-The process wasn't that hard, but it did require keeping track of version numbers and needed dependencies so you could periodically check the AUR site for version updates. If you had only a few AUR packages installed it was no big deal, but as your software stash grew it could get cumbersome. This is where a package manager comes in. It does all this for you.
+The process wasn't that hard, but it did require keeping track of version numbers so you could periodically check the AUR site for version updates, along with managing AUR dependencies. If you had only a few AUR packages installed it was no big deal, but as your software stash grew it could get cumbersome. This is where a package manager comes in. It does all this for you.
 
 After the AUR moved everything to github the process got simpler: Instead of manually downloading a package, you can run `git clone`. To check for updates, instead of looking up version numbers, you run a `git pull`. If the pull is already up to date there's nothing to do. If the pull results in changes you run `makepkg`.
 
