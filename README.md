@@ -19,19 +19,17 @@ So how do you install packages manually? The classic way, prior to AUR moving to
 
 The process wasn't that hard, but it did require keeping track of version numbers so you could periodically check the AUR site for version updates, along with managing AUR dependencies. If you had only a few AUR packages installed it was no big deal, but as your software stash grew it could get cumbersome. This is where a package manager comes in. It does all that for you.
 
-After the AUR moved everything to github the process got simpler: Instead of manually downloading a package, you can run `git clone`. To check for updates, instead of looking up version numbers, you run a `git pull`. If the pull is already up to date there's nothing to do. If the pull results in changes you run `makepkg`.
+After the AUR moved everything to github the process got simpler: Instead of manually downloading a package, you could run `git clone`. To check for updates, instead of looking up version numbers, you run a `git pull`. If the pull is already up to date there's nothing to do. If the pull results in changes you run `makepkg`. Definitely easier, but you still had to manage AUR dependencies.
 
-Definitely easier, but if the package contains dependencies that are not from the official repositories (`makepkg` resolves all pacman dependencies automatically) then you still have to manage them yourself.
-
-AURIC started life as my desire to write a shell script that automates the above process. When I stumbled onto vam I realized that someone else had a similar idea and had written the core functionality. I took that script and built it into AURIC.
+AURIC started life as my desire to write a shell script that automates the above process, including the dependency management. When I stumbled onto vam I realized that someone else had a similar idea and had written the core functionality. At a mere 55 lines of code, however, that script is extremely lean. It only handles package and dependency downloading, and runs a git pull to check for updates. I took vam and built it into AURIC.
 
 The way it works is this: AURIC creates a hidden folder in your home directory called .AUR in which it stores git clones of your AUR packages. When you tell AURIC to check for updates it does a git pull for each of the packages and compares the installed version to the new version. If the new version number is greater, it informs you that `makepkg` should be run (which you can do by calling the AURIC install function).
 
 The one major downside to using a `git pull` to determine if a package is out of date is this: You can only do a git pull once. Since the pull updates your local repo, subsequent pulls will show the package as being current, even if you didn't actually run `makepkg`. In other words, you might have applications that are out of date even though git thinks you are current.
 
-So better version comparison was one thing I wanted to solve in AURIC. I did that by using the SRCINFO file data and comparing it to the installed version number. I also wanted it to handle the package installation (and with that, PKGBUILD auditing). Along the way I added much more thorough error handling and a few other things, like automated migration of currently installed packages to AURIC, colored keyword search results, and support for jq and jshon parsing.
+So better version comparison was one thing I wanted to solve in AURIC. I did that by using the `SRCINFO` file data and comparing it to the installed version number returned by pacman. I also wanted it to handle the package installation (and with that, `PKGBUILD` auditing). Along the way I added much more thorough error handling, package dependency verification, automated migration of currently installed packages to AURIC, colored keyword search results, and support for jq and jshon parsing.
 
-Should you use AURIC? If you are happy with your current package manager I would say no. If you are looking for something extremely simple that helps automate the tasks you are already comfortable doing, then you might give it a try.
+Should you use AURIC? If you are happy with your current package manager then definitely no. If you are looking for a simple tool that helps automate the tasks you are already comfortable doing then you might give it a try.
 
 ## Usage
 
