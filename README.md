@@ -3,7 +3,7 @@ Minimalist Arch User Repository package manager based on vam.
 
 <img src="https://i.imgur.com/mgxQwZS.png" />
 
-AURIC is a fork of __[vam](https://github.com/calebabutler/vam)__ with a pretty interface, `SRCINFO` version comparison for better reliability, package installation (with `PKGBUILD` auditing), local and remote dependency verification, search keyword coloring, JSON parsing using either jq or jshon, and a few additional features.
+AURIC is a fork of __[vam](https://github.com/calebabutler/vam)__ with a pretty interface, `SRCINFO` version comparison for better reliability, package installation (with `PKGBUILD` auditing), local and remote dependency verification, search keyword coloring, and a few additional features.
 
 The name AURIC is a play on two words: AUR and Rick. It's also the name of the main antagonist in the James Bond film Goldfinger.
 
