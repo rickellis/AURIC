@@ -421,13 +421,13 @@ verifydep() {
         exit 1
     fi
 
+    echo -e "VERIFYING DEPENDENCIES FOR ${cyan}${PKG}${reset}"
+    echo
+
     # Preserve the old input field separator
     OLDIFS=$IFS
     # Change the input field separator from a space to a null
     IFS=$'\n'
-
-    echo -e "VERIFYING DEPENDENCIES FOR ${cyan}${PKG}${reset}"
-    echo
 
     # Read the .SRCINFO file line by line
     for line in `cat ${AURDIR}/${PKG}/.SRCINFO `; do
@@ -453,6 +453,7 @@ verifydep() {
         fi
     done
 
+    # Restore input field separator
     IFS=$OLDIFS
 }
 
@@ -474,7 +475,7 @@ search() {
         json_result=$(echo "$curl_result" | jshon -e results -a -e Name -u)
     fi
 
-    if [[ $json_result == "[]" ]] || [[ $json_result == null ]]; then
+    if [[ $json_result == "[]" ]] || [[ $json_result == null ]] || [[ -z $json_result ]]; then
         echo -e "${red}NO RESULTS:${reset} No results for the term \"${cyan}${PKG}${reset}\""
     else
         echo "SEARCH RESULTS"
