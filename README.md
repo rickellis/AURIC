@@ -50,9 +50,10 @@ Should you use AURIC? If you are happy with your current package manager I would
 
     $  auric -r package-name  # Remove package. It runs sudo pacman -Rsc and deletes the local git repo
 
-    $  auric -v package-name  # Verify that all dependencies for a package are installed
+    $  auric -v package-name  # Verify that all dependencies for a local package are installed
 
-    $  auric -m               # Migrate previously installed AUR packages to AURIC
+    $  auric -m package-name  # Migrate a specific package to AURIC
+    $  auric -m               # Migrate all previously installed AUR packages to AURIC
 
 ## Terminal Shortcut
 To make running the script more convenient you can add the following alias to your __.bashrc__ file, and then just enter the various __auric__ commands from your terminal without having to traverse into the AURIC directory.
