@@ -10,7 +10,7 @@ The name AURIC is a play on two words: AUR and Rick. It's also the name of the m
 ## Background Info
 There are two basic ways to install and update packages from the Arch User Repository: Use a package manager or do it manually. If you are a new Arch Linux user, you should always use the later method before settling on one of the many available package managers, as this will better equip you to run Arch.
 
-So how do you install packages manually? The classic way prior to AUR moving to github was this:
+So how do you install packages manually? The classic way, prior to AUR moving to github was this:
 
 * Search for your desired package at the __[AUR](https://aur.archlinux.org/)__ website.
 * Download and unpack the tar.gz archive.
