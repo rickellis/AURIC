@@ -12,7 +12,7 @@ There are two basic ways to install and update packages from the Arch User Repos
 
 So how do you install packages manually? The classic way, prior to AUR moving to github was this:
 
-* Search for your desired package at the __[AUR](https://aur.archlinux.org/)__ website.
+* Search for your desired package at the __[AUR website](https://aur.archlinux.org/)__.
 * Download and unpack the tar.gz archive.
 * Audit the `PKGBUILD` file for security.
 * Run `makepkge` to install it.
