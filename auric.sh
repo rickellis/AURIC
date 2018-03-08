@@ -35,18 +35,25 @@ AUR_SRCH_URL="https://aur.archlinux.org/rpc/?v=5&type=search&by=name&arg="
 # GIT URL for AUR repos. %s will be replaced with package name
 GIT_AUR_URL="https://aur.archlinux.org/%s.git"
 
-# Will contain the list of all installed packages. This gets set automatically
+# Whether to show the AURIC version number heading and clear
+# screen with each request. Boolean: true or false
+SHOW_HEADING=true
+
+# ----------------------------------------------------------------------------------
+
+# THESE GET SET AUTOMATICALLY
+
+# Will contain the list of all installed packages.
 LOCAL_PKGS=""
 
-# Name of installed JSON parser. This gets set automatically.
+# Name of installed JSON parser. 
 JSON_PARSER=""
 
-# Whether a package is a dependency. This gets set automatically.
+# Whether a package is a dependency.
 IS_DEPEND=false
 
 # Flag gets set during migration to ignore dependencies since 
 # these will already have been installed previously
-# This gets set automatically.
 IS_MIGRATING=false
 
 # Array containg all successfully downloaded packages.
@@ -74,6 +81,11 @@ fi
 
 # Help screen
 help() {
+    if [[ -z "$1" ]]; then
+        echo -e "AURIC COMMANDS"
+    else
+        echo -e "${red}INVALID REQUEST. SHOWING HELP MENU${reset}"
+    fi
     echo 
     echo -e "auric -d package-name\t# Download a package"
     echo -e "auric -i package-name\t# Installs package if local version has been downloaded."
@@ -84,7 +96,8 @@ help() {
     echo -e "auric -q \t\t# Show all local packages in AURIC"
     echo -e "auric -r package-name\t# Remove a package"
     echo -e "auric -v package-name\t# Verify that all dependencies for a package are installed"
-    echo -e "auric -m \t\t# Migrate previously installed AUR packages to AURIC"
+    echo -e "auric -m package-name \t# Migrate a specific package to AURIC"
+    echo -e "auric -m \t\t# Migrate all previously installed AUR packages to AURIC"
     echo
     exit 1
 }
@@ -104,10 +117,22 @@ validate_pkgname(){
 
 # ----------------------------------------------------------------------------------
 
-# Download a package and its dependencies from AUR
+# Download handler
 download() {
     # Make sure we have a package name
     validate_pkgname "$1"
+
+    # Perform the download
+    do_download "$1"
+
+    # Offer to install the downloaded package(s)
+    offer_to_install
+}
+
+# ----------------------------------------------------------------------------------
+
+# Download a package and its dependencies from AUR
+do_download() {
 
     # Get a list of all installed packages
     if [[ "${LOCAL_PKGS}" == "" ]]; then
@@ -221,7 +246,7 @@ download() {
                     # Download it
                     if [[ "$?" == 1 ]]; then
                         IS_DEPEND=true
-                        download "$depend"
+                        do_download "$depend"
                     fi
                     IS_DEPEND=false
                 done
@@ -251,6 +276,45 @@ install() {
     else
         doinstall $PKG
     fi
+    echo
+}
+
+# ----------------------------------------------------------------------------------
+
+# This function gets called automatically after a new package is downloaded or
+# when an update is available so the user can elect to install the package(s)
+offer_to_install(){
+
+    if [[ ${#TO_INSTALL[@]} -eq 0 ]]; then
+        return 0
+    fi
+
+    echo
+    if [[ ${#TO_INSTALL[@]} == 1 ]]; then
+        echo "Would you like to install the package?"
+    else
+        echo "Would you like to install the packages?"
+    fi 
+    
+    echo
+    for PKG in ${TO_INSTALL[@]}; do
+        echo -e "  ${cyan}${PKG}${reset}"
+    done
+    echo
+    read -p "ENTER [Y/n] " CONSENT
+
+    if [[ ! -z $CONSENT ]] && [[ ! $CONSENT =~ [y|Y] ]]; then
+        echo
+        echo "Goodbye..."
+    else
+        # Run through the install array in reverse order.
+        # This helps ensure that dependencies get installed first.
+        # The order doesn't matter after updating, only downloading
+        for (( i=${#TO_INSTALL[@]}-1 ; i>=0 ; i-- )) ; do
+            doinstall "${TO_INSTALL[i]}"
+        done
+    fi
+    echo
 }
 
 # ----------------------------------------------------------------------------------
@@ -322,6 +386,9 @@ update() {
         echo
         doupdate $1
     fi
+
+    # Offer to install the package updates
+    offer_to_install
 }
 
 # ----------------------------------------------------------------------------------
@@ -388,9 +455,12 @@ doupdate() {
 
 # ----------------------------------------------------------------------------------
 
-# Verify that all dependencies for a local package are installed
+# Verify that all dependencies for a local AUR package are installed. This is a 
+# helper function that is useful to run prior to installing any new updates
+# in case a new package dependency was needed
 verifydep() {
     validate_pkgname "$1"
+    local depend
     local PKG
     PKG=$1
 
@@ -401,11 +471,31 @@ verifydep() {
         pacman -Q $PKG  >/dev/null 2>&1
 
         if [[ "$?" -eq 0 ]]; then
-            echo -e "${red}ERROR: $PKG is installed but not currently under AURIC management${reset}"
-            echo
-            echo -e "To migrate the package to AURIC run: ${cyan}auric -m${reset}"
-            echo
-            exit 1
+
+            # Verify whether the package is an AUR or official package
+            curl_result=$(curl -fsSk "${AUR_INFO_URL}${PKG}")
+
+            # Parse the result using the installed JSON parser
+            if [[ $JSON_PARSER == 'jq' ]]; then
+                json_result=$(echo "$curl_result" | jq -r '.results')
+            else
+                json_result=$(echo "$curl_result" | jshon -e results)
+            fi
+
+            # Did the package query return a valid result?
+            if [[ $json_result == "[]" ]]; then
+                echo -e "${red}ERROR: $PKG is not an AUR package${reset}"
+                echo
+                echo "This function only verifies dependencies for installed AUR packages"
+                echo
+                exit 1
+            else
+                echo -e "${red}ERROR: $PKG is installed but not currently under AURIC management${reset}"
+                echo
+                echo -e "To migrate the package to AURIC run: ${cyan}auric -m${reset}"
+                echo
+                exit 1
+            fi
         else
             echo -e "${red}ERROR: ${PKG} is not installed on your system${reset}"
             echo
@@ -443,6 +533,11 @@ verifydep() {
         # Remove "depends=" leaving only the package name
         depend=$(echo $line | sed "s/depends=//")
 
+        # Remove everything after >= in $depend
+        # Some dependencies have minimum version requirements
+        # which screws up the package name
+        depend=$(echo $depend | sed "s/[>=].*//")        
+
         # Make sure the dependency is installed
         pacman -Q $depend  >/dev/null 2>&1
 
@@ -455,6 +550,7 @@ verifydep() {
 
     # Restore input field separator
     IFS=$OLDIFS
+    echo
 }
 
 # ----------------------------------------------------------------------------------
@@ -490,20 +586,28 @@ search() {
             echo -e " ${res}"
         done
     fi
+    echo
 }
 
 # ----------------------------------------------------------------------------------
 
 # Migrate all previously installed AUR packages to AURIC
 migrate() {
-    echo "MIGRATING INSTALLED AUR PACKAGES TO AURIC"
-    echo
-    AURPKGS=$(pacman -Qm | awk '{print $1}')
     IS_MIGRATING=true
-    for PKG in $AURPKGS; do
-        PKG=${PKG// /}
-        download "$PKG"
-    done
+    if [[ -z "$1" ]]; then
+        echo "MIGRATING INSTALLED AUR PACKAGES TO AURIC"
+        echo
+        AURPKGS=$(pacman -Qm | awk '{print $1}')
+        
+        for PKG in $AURPKGS; do
+            PKG=${PKG// /}
+            download "$PKG"
+        done
+    else
+        echo "MIGRATING $1 TO AURIC"
+        echo
+        download "$1"
+    fi
     IS_MIGRATING=false
     TO_INSTALL=()
 }
@@ -516,10 +620,10 @@ query() {
     echo
     cd $AURDIR
     PKGS=$(ls)
-
     for P in $PKGS; do
         echo -e "  ${cyan}${P}${reset}"
     done
+    echo
 }
 
 # ----------------------------------------------------------------------------------
@@ -549,12 +653,23 @@ remove() {
         echo
         echo "Goodbye..."
     fi
+    echo
 }
 
 # ----------------------------------------------------------------------------------
+#  BEGIN OUTPUT
+# ----------------------------------------------------------------------------------
 
-# APPLICATION LOGIC
-echo
+if [[ $SHOW_HEADING == true ]]; then
+    clear
+    heading purple "AURIC $VERSION"
+else
+    echo
+fi
+
+# ----------------------------------------------------------------------------------
+
+# DEPENDENCY CHECKS
 
 # Is jq or jshon installed? 
 if command -v jq &>/dev/null; then
@@ -587,9 +702,12 @@ if ! command -v vercmp &>/dev/null; then
     exit 1
 fi
 
+# ----------------------------------------------------------------------------------
+
+# VALIDATE REQUEST
+
 # No arguments, we show help
 if [[ -z "$1" ]]; then
-    echo -e "AURIC COMMANDS"
     help
 fi
 
@@ -598,16 +716,9 @@ CMD=${CMD,,}    # lowercase
 CMD=${CMD//-/}  # remove dashes
 CMD=${CMD// /}  # remove spaces
 
-# Show help menu
-if [[ $CMD =~ [h] ]] ; then
-    echo -e "AURIC COMMANDS"
-    help
-fi
-
-# Invalid arguments trigger help
-if [[ $CMD =~ [^diusqrmv] ]]; then
-    echo -e "${red}INVALID REQUEST. SHOWING HELP MENU${reset}"
-    help
+# -h or invalid arguments trigger help
+if [[ $CMD =~ [h] ]] || [[ $CMD =~ [^diusqrmv] ]]; then
+    help "error"
 fi
 
 # Create the local AUR folder if it doesn't exist
@@ -615,10 +726,11 @@ if [[ ! -d "$AURDIR" ]]; then
     mkdir -p "$AURDIR"
 fi
 
-# Remove the first argument since we're done with it
-shift
+# ----------------------------------------------------------------------------------
 
-# Process the request
+# PROCESS REQUEST
+
+shift
 case "$CMD" in
     d)  download "$@" ;;
     i)  install "$@" ;;
@@ -630,36 +742,3 @@ case "$CMD" in
     v)  verifydep "$@";;
     *)  help ;;
 esac
-
-# ----------------------------------------------------------------------------------
-
-# If the TO_INSTALL array contains package names we offer to install them
-if [[ ${#TO_INSTALL[@]} -gt 0 ]]; then
-    echo
-
-    if [[ ${#TO_INSTALL[@]} == 1 ]]; then
-        echo "Would you like to install the package?"
-    else
-        echo "Would you like to install the packages?"
-    fi 
-    
-    echo
-    for PKG in ${TO_INSTALL[@]}; do
-        echo -e "  ${cyan}${PKG}${reset}"
-    done
-    echo
-    read -p "ENTER [Y/n] " CONSENT
-
-    if [[ ! -z $CONSENT ]] && [[ ! $CONSENT =~ [y|Y] ]]; then
-        echo
-        echo "Goodbye..."
-    else
-        # Run through the install array in reverse order.
-        # This helps ensure that dependencies get installed first.
-        # The order doesn't matter after updating, only downloading
-        for (( i=${#TO_INSTALL[@]}-1 ; i>=0 ; i-- )) ; do
-            doinstall "${TO_INSTALL[i]}"
-        done
-    fi
-fi
-echo
