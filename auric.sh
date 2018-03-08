@@ -7,12 +7,13 @@
 #   AUR package manager
 #
 #-----------------------------------------------------------------------------------
-VERSION="1.2.7"
+VERSION="1.2.8"
 #-----------------------------------------------------------------------------------
 #
 # AURIC is a fork of vam with a pretty interface, SRCINFO version comparison,
-# package installation (with PKGBUILD auditing), search keyword coloring, 
-# JSON parsing using either jq or jshon, and a few additional features
+# package installation (with PKGBUILD auditing), dependency verification, 
+# search keyword coloring, JSON parsing using either jq or jshon, and a 
+# few additional features
 #
 # The name AURIC is a play on two words: AUR and Rick. It's also the name
 # of the main antagonist in the James Bond film Goldfinger.
@@ -75,15 +76,15 @@ fi
 help() {
     echo 
     echo -e "auric -d package-name\t# Download a package"
-    echo -e "auric -i package-name\t# Installs package if local version exists."
-    echo -e "\t\t\t# If package does not exist it hands it off to auric -d package-name"
+    echo -e "auric -i package-name\t# Installs package if local version has been downloaded."
+    echo -e "\t\t\t# If package does not exist it hands it off to auric -d"
     echo -e "auric -u package-name\t# Update a package"
     echo -e "auric -u \t\t# Update all installed packages"
     echo -e "auric -s package-name\t# Search for a package"
     echo -e "auric -q \t\t# Show all local packages in AURIC"
     echo -e "auric -r package-name\t# Remove a package"
+    echo -e "auric -v package-name\t# Verify that all dependencies for a package are installed"
     echo -e "auric -m \t\t# Migrate previously installed AUR packages to AURIC"
-    echo -e "auric -v \t\t# Show version info"
     echo
     exit 1
 }
@@ -95,9 +96,7 @@ validate_pkgname(){
     if [[ -z "$1" ]]; then
         echo -e "${red}Error: Package name required${reset}"
         echo
-        echo "See help menu for more info:"
-        echo
-        echo -e "\t${cyan}auric --help${reset}"
+        echo -e "Enter ${cyan}auric --help${reset} for more info"
         echo
         exit 1
     fi
@@ -268,7 +267,7 @@ doinstall() {
 
     # Make sure the PKGBUILD script exists
     if [[ ! -f "${AURDIR}/${PKG}/PKGBUILD" ]]; then
-        echo -e "${red}ERROR: PKGBUILD script does not exist in ${AURDIR}/${PKG}"
+        echo -e "${red}ERROR:${reset} PKGBUILD script does not exist in ${AURDIR}/${PKG}"
         echo
         exit 1
     fi
@@ -338,15 +337,28 @@ doupdate() {
         exit 1
     fi
 
-    cd ${AURDIR}/${PKG} || exit
-    git pull >/dev/null 2>&1
+    if [[ ! -f ${AURDIR}/${PKG}/.SRCINFO ]]; then
+        echo -e "${red}ERROR:${reset} .SRCINFO does not exist in ${AURDIR}/${PKG}"
+        echo
+        exit 1
+    fi
 
-    # Get the version number of the currently installed package
+    # Get the version number of the currently installed package.
     local_pkgver=$(pacman -Q $PKG)
+
+    # No version number? Package isn't installed
+    if [[ "$?" -ne 0 ]]; then
+        echo -e "${red}ERROR:${reset} ${PKG} does not appper to be installed on your system"
+        echo
+        exit 1
+    fi
 
     # Remove the package name, leaving only the version/release number
     local_pkgver=$(echo $local_pkgver | sed "s/${PKG} //")
     local_pkgver=$(echo $local_pkgver | sed "s/[ ]//")
+
+    cd ${AURDIR}/${PKG} || exit
+    git pull >/dev/null 2>&1
 
     # Open .SRCINFO and get the version/release numbers
     # for comparison with the installed version
@@ -354,8 +366,8 @@ doupdate() {
     pkgrel=$(sed -n 's/pkgrel[ ]*=//p'  .SRCINFO)
 
     # Kill stray spaces
-    pkgver=$(echo $pkgver | sed "s/[ ]//")
-    pkgrel=$(echo $pkgrel | sed "s/[ ]//")
+    pkgver=$(echo $pkgver | sed "s/[ ]//g")
+    pkgrel=$(echo $pkgrel | sed "s/[ ]//g")
 
     # Combine pkgver and pkgrel into the new full version number for comparison
     if [[ ! -z $pkgrel ]]; then
@@ -364,16 +376,84 @@ doupdate() {
         new_pkgver="${pkgver}"
     fi
 
-    echo -e "PACKAGE: ${PKG}"
-
     if [[ $(vercmp $new_pkgver $local_pkgver) -eq 1 ]]; then
         echo -e "${green}NEW VER: ${PKG} ${pkgver} is available${reset}"
         echo -e "${yellow}PKG BLD: Build files have been downloaded. ${PKG} is ready to be reinstalled${reset}" 
-
         TO_INSTALL+=("$PKG")
     else
+        echo -e "PACKAGE: ${PKG}"
         echo -e "${cyan}CURRENT: ${PKG} is up to date${reset}"
     fi
+}
+
+# ----------------------------------------------------------------------------------
+
+# Verify that all dependencies for a local package are installed
+verifydep() {
+    validate_pkgname "$1"
+    local PKG
+    PKG=$1
+
+    # If the package isn't currently managed by AURIC...
+    if [[ ! -d ${AURDIR}/${PKG} ]]; then
+
+        # Is the package installed on the system?...
+        pacman -Q $PKG  >/dev/null 2>&1
+
+        if [[ "$?" -eq 0 ]]; then
+            echo -e "${red}ERROR: $PKG is installed but not currently under AURIC management${reset}"
+            echo
+            echo -e "To migrate the package to AURIC run: ${cyan}auric -m${reset}"
+            echo
+            exit 1
+        else
+            echo -e "${red}ERROR: ${PKG} is not installed on your system${reset}"
+            echo
+            echo "This function only verifies dependencies for installed packages"
+            echo
+            exit 1
+        fi
+    fi
+
+    if [[ ! -f ${AURDIR}/${PKG}/.SRCINFO ]]; then
+        echo -e "${red}ERROR:${reset} .SRCINFO does not exist in ${AURDIR}/${PKG}"
+        echo
+        exit 1
+    fi
+
+    # Preserve the old input field separator
+    OLDIFS=$IFS
+    # Change the input field separator from a space to a null
+    IFS=$'\n'
+
+    echo -e "VERIFYING DEPENDENCIES FOR ${cyan}${PKG}${reset}"
+    echo
+
+    # Read the .SRCINFO file line by line
+    for line in `cat ${AURDIR}/${PKG}/.SRCINFO `; do
+        
+        # Remove tabs and spaces
+        line=$(echo $line | sed "s/[ \t]//g")
+
+        # Ignore lines that don't list dependencies
+        if [[ ${line:0:8} != "depends=" ]]; then
+            continue
+        fi
+
+        # Remove "depends=" leaving only the package name
+        depend=$(echo $line | sed "s/depends=//")
+
+        # Make sure the dependency is installed
+        pacman -Q $depend  >/dev/null 2>&1
+
+        if [[ "$?" -eq 0 ]]; then
+            echo -e " ${green}INSTALLED:${reset} ${depend}"
+        else
+            echo -e " ${red}NOT INSTALLED:${reset} ${depend}"
+        fi
+    done
+
+    IFS=$OLDIFS
 }
 
 # ----------------------------------------------------------------------------------
@@ -448,7 +528,7 @@ remove() {
     cd "$AURDIR" || exit
     PKG=$1
     if [[ ! -d ${AURDIR}/${PKG} ]]; then
-        echo -e "${red}ERROR: ${PKG} is not an installed package"
+        echo -e "${red}ERROR:${reset} ${PKG} is not an installed package"
         echo
         exit 1
     fi
@@ -472,13 +552,7 @@ remove() {
 
 # ----------------------------------------------------------------------------------
 
-function version() {
-    heading purple "AURIC VERSION ${VERSION}"
-}
-
-# ----------------------------------------------------------------------------------
-
-# A little space to get things going...
+# APPLICATION LOGIC
 echo
 
 # Is jq or jshon installed? 
@@ -552,7 +626,7 @@ case "$CMD" in
     q)  query "$@" ;;
     r)  remove "$@" ;;
     m)  migrate "$@" ;;
-    v)  version ;;
+    v)  verifydep "$@";;
     *)  help ;;
 esac
 
