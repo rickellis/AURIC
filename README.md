@@ -27,7 +27,7 @@ The way it works is this: AURIC creates a hidden folder in your home directory c
 
 The one major downside to using a `git pull` to determine if a package is out of date is this: You can only do a git pull once. Since the pull updates your local repo, subsequent pulls will show the package as being current, even if you didn't actually run `makepkg`. In other words, you might have applications that are out of date even though git thinks you are current.
 
-So better version comparison was one thing I wanted to solve in AURIC. I did that by using the `SRCINFO` file data and comparing it to the installed version number returned by pacman. I also wanted it to handle the package installation (and with that, `PKGBUILD` auditing). Along the way I added much more thorough error handling, package dependency verification, automated migration of currently installed packages to AURIC, colored keyword search results, and support for jq and jshon parsing.
+So more reliable version comparison was one thing I wanted to solve in AURIC. I did that by using the `SRCINFO` file data and comparing it to the installed version number returned by pacman. That way, regardless of whether your git repo is current you'll be informed that you need to update. I also wanted AURIC to handle the package installation (and with that, `PKGBUILD` auditing). Along the way I added much more thorough error handling, package dependency verification, automated migration of currently installed packages to AURIC, colored keyword search results, and support for jq and jshon.
 
 Should you use AURIC? If you are happy with your current package manager then definitely no. If you are looking for a simple tool that helps automate the tasks you are already comfortable doing then you might give it a try.
 
@@ -52,6 +52,15 @@ Should you use AURIC? If you are happy with your current package manager then de
     $  auric -m                # Migrate all previously installed AUR packages to AURIC
 
     $  auric -r  package-name  # Remove package. It runs sudo pacman -Rsc and deletes the local git repo
+
+
+## Dependencies
+AURIC requires the following packages:
+
+    * Curl for remote data fetching
+    * Either jq or jshon to parse the query results
+    * vercmp to compare versions (installed by default in Arch)
+    * Bash 4 or newer
 
 
 ## Terminal Shortcut
