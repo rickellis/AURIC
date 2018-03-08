@@ -81,23 +81,31 @@ fi
 
 # Help screen
 help() {
-    if [[ -z "$1" ]]; then
-        echo -e "AURIC COMMANDS"
-    else
+    if [[ $1 == "error" ]]; then
         echo -e "${red}INVALID REQUEST. SHOWING HELP MENU${reset}"
+    else
+        echo -e "AURIC COMMANDS"
     fi
     echo 
-    echo -e "auric -d package-name\t# Download a package"
-    echo -e "auric -i package-name\t# Installs package if local version has been downloaded."
-    echo -e "\t\t\t# If package does not exist it hands it off to auric -d"
-    echo -e "auric -u package-name\t# Update a package"
+    echo -e "auric -d  package-name\t# Download a package"
+    echo
+    echo -e "auric -i  package-name\t# Install a package if it has been downloaded."
+    echo -e "\t\t\t# If local package does not exist it hands it off to auric -d"
+    echo
+    echo -e "auric -u  package-name\t# Update a package"
     echo -e "auric -u \t\t# Update all installed packages"
-    echo -e "auric -s package-name\t# Search for a package"
-    echo -e "auric -q \t\t# Show all local packages in AURIC"
-    echo -e "auric -r package-name\t# Remove a package"
-    echo -e "auric -v package-name\t# Verify that all dependencies for a package are installed"
-    echo -e "auric -m package-name \t# Migrate a specific package to AURIC"
+    echo
+    echo -e "auric -s  package-name\t# Search for a package"
+    echo
+    echo -e "auric -q \t\t# Show all local packages managed by AURIC"
+    echo
+    echo -e "auric -vl package-name\t# Verify that all dependencies for a local package are installed"
+    echo -e "auric -vr package-name\t# Verify that all dependencies for a remote package are installed"
+    echo
+    echo -e "auric -m  package-name \t# Migrate a specific package to AURIC"
     echo -e "auric -m \t\t# Migrate all previously installed AUR packages to AURIC"
+    echo
+    echo -e "auric -r  package-name\t# Remove a package"
     echo
     exit 1
 }
@@ -233,12 +241,12 @@ do_download() {
                 fi
         
                 # Run through the dependencies
-                for depend in "${dependencies}"; do
+                for depend in $dependencies; do
 
                     # Remove everything after >= in $depend
                     # Some dependencies have minimum version requirements
                     # which screws up the package name
-                    depend=$(echo $depend | sed "s/[>=].*//")
+                    depend=$(echo $depend | sed "s/>=.*//")
 
                     # See if the dependency is already installed
                     echo "$LOCAL_PKGS" | grep "$depend" > /dev/null
@@ -455,10 +463,79 @@ doupdate() {
 
 # ----------------------------------------------------------------------------------
 
+# Verify that all dependencies for a remote AUR package are installed. 
+verifyrdep() {
+    validate_pkgname "$1"
+    local PKG
+    PKG=$1
+
+    echo -e "VERIFYING DEPENDENCIES FOR ${cyan}${PKG}${reset}"
+    echo
+
+    # Verify whether the package is an AUR or official package
+    curl_result=$(curl -fsSk "${AUR_INFO_URL}${PKG}")
+
+    # Parse the result using the installed JSON parser
+    if [[ $JSON_PARSER == 'jq' ]]; then
+        json_result=$(echo "$curl_result" | jq -r '.results')
+    else
+        json_result=$(echo "$curl_result" | jshon -e results)
+    fi
+
+    # Did the package query return a valid result?
+    if [[ $json_result == "[]" ]]; then
+        echo -e "${red}ERROR: $PKG is not an AUR package${reset}"
+        echo
+        echo "This function only verifies dependencies for installed AUR packages"
+        echo
+        return 0
+    fi
+
+    # Get the package dependencies using installed json parser
+    if [[ $JSON_PARSER == 'jq' ]]; then
+        has_depends=$(echo "$curl_result" | jq -r '.results[0].Depends') 
+    else
+        has_depends=$(echo "$curl_result" | jshon -e results -e 0 -e Depends)
+    fi
+
+    # If there is a result, recurisvely call this function with the dependencies
+    if [[ $has_depends != "[]" ]] && [[ $has_depends != null ]]; then
+
+        if [[ $JSON_PARSER == 'jq' ]]; then
+            dependencies=$(echo "$curl_result" | jq -r '.results[0].Depends[]') 
+        else
+            dependencies=$(echo "$curl_result" | jshon -e results -e 0 -e Depends -a -u)
+        fi
+
+        # Run through the dependencies
+        for depend in $dependencies; do
+
+            # Remove everything after >= in $depend
+            # Some dependencies have minimum version requirements
+            # which screws up the package name
+            depend=$(echo $depend | sed "s/>=.*//")
+
+            # Make sure the dependency is installed
+            pacman -Q $depend  >/dev/null 2>&1
+
+            if [[ "$?" -eq 0 ]]; then
+                echo -e " ${green}INSTALLED:${reset} ${depend}"
+            else
+                echo -e " ${red}NOT INSTALLED:${reset} ${depend}"
+            fi
+        done
+    else
+        echo -e "${red}$PKG requires no dependencies${reset}"
+    fi
+    echo
+}
+
+# ----------------------------------------------------------------------------------
+
 # Verify that all dependencies for a local AUR package are installed. This is a 
 # helper function that is useful to run prior to installing any new updates
 # in case a new package dependency was needed
-verifydep() {
+verifyldep() {
     validate_pkgname "$1"
     local depend
     local PKG
@@ -536,7 +613,7 @@ verifydep() {
         # Remove everything after >= in $depend
         # Some dependencies have minimum version requirements
         # which screws up the package name
-        depend=$(echo $depend | sed "s/[>=].*//")        
+        depend=$(echo $depend | sed "s/>=.*//")        
 
         # Make sure the dependency is installed
         pacman -Q $depend  >/dev/null 2>&1
@@ -708,7 +785,7 @@ fi
 
 # No arguments, we show help
 if [[ -z "$1" ]]; then
-    help
+    help "error"
 fi
 
 CMD=$1          # first argument
@@ -716,8 +793,8 @@ CMD=${CMD,,}    # lowercase
 CMD=${CMD//-/}  # remove dashes
 CMD=${CMD// /}  # remove spaces
 
-# -h or invalid arguments trigger help
-if [[ $CMD =~ [h] ]] || [[ $CMD =~ [^diusqrmv] ]]; then
+# Invalid arguments trigger help
+if [[ $CMD =~ [^diusqrlmvh] ]]; then
     help "error"
 fi
 
@@ -739,6 +816,7 @@ case "$CMD" in
     q)  query "$@" ;;
     r)  remove "$@" ;;
     m)  migrate "$@" ;;
-    v)  verifydep "$@";;
-    *)  help ;;
+    vl) verifyldep "$@";;
+    vr) verifyrdep "$@";;
+    h)  help ;;
 esac
