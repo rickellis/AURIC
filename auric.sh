@@ -7,7 +7,7 @@
 #   AUR package manager
 #
 #-----------------------------------------------------------------------------------
-VERSION="1.3.1"
+VERSION="1.3.2"
 #-----------------------------------------------------------------------------------
 #
 # AURIC is a fork of vam with a pretty interface, SRCINFO version comparison,
@@ -56,6 +56,10 @@ DEPEND_HEADING=false
 # Flag gets set during migration to ignore dependencies since 
 # these will already have been installed previously
 IS_MIGRATING=false
+
+# Whether to remove the downloaded package.
+# This suppresses removal for updated packages
+REMOVE_PKG=true
 
 # Array containg all successfully downloaded packages.
 # If this contains package names AURIC will prompt
@@ -196,7 +200,7 @@ download() {
                 continue
             fi
 
-            echo -e "${yellow}CLONING: $PKG${reset}"
+            echo -e "${yellow}CLONING:${reset} $PKG"
 
             # Assemble the git package URL
             printf -v URL "$GIT_AUR_URL" "$PKG"
@@ -212,7 +216,7 @@ download() {
 
             # Extra precaution: We make sure the package folder was created in the local repo
             if [[ -d "$PKG" ]]; then
-                echo -e "${cyan}SUCCESS:${reset} ${cyan}${PKG} cloned${reset}"
+                echo -e "${green}SUCCESS: ${PKG} cloned${reset}"
             else
                 echo -e "${red}PROBLEM:${reset} An unknown error occurred. ${PKG} not downloaded"
                 continue
@@ -366,11 +370,19 @@ do_install() {
 
 # Update git repos
 update() {
+
+    if [ -z "$(ls -A ${AURDIR})" ]; then
+        echo "Your local AUR directory is empty. Use auric -m to migrate packages"
+        echo
+        exit 1
+    fi
+
     cd "$AURDIR" || exit
+
     echo "CHECKING FOR UPDATES"
     if [[ -z $1 ]]; then
+        echo
         for DIR in ./*; do
-            echo
             # Remove directory path, leaving only the name.
             # Then pass the package name to the update function
             do_update ${DIR:2}
@@ -385,9 +397,9 @@ update() {
         echo
         do_update $1
     fi
-    echo
 
     # Offer to install the package updates
+    REMOVE_PKG=false
     offer_to_install
 }
 
@@ -437,12 +449,10 @@ do_update() {
     fi
 
     if [[ $(vercmp $new_pkgver $local_pkgver) -eq 1 ]]; then
-        echo -e "${green}NEW VER: ${PKG} ${pkgver} is available${reset}"
-        echo -e "${yellow}PKG BLD: Build files have been downloaded.${reset}" 
+        echo -e "${yellow}NEW VERSION: ${PKG} ${pkgver}. Build files downloaded.${reset}" 
         TO_INSTALL+=("$PKG")
     else
-        echo -e "PACKAGE: ${PKG}"
-        echo -e "${cyan}CURRENT: ${PKG} is up to date${reset}"
+        echo -e "${green}CURRENT:${reset} ${PKG} is up to date"
     fi
 }
 
@@ -668,6 +678,7 @@ migrate() {
         done
         IS_MIGRATING=false
         TO_INSTALL=()
+        echo
         return 0
     fi
 
@@ -719,6 +730,7 @@ migrate() {
     download "$1"
     IS_MIGRATING=false
     TO_INSTALL=()
+    echo
 }
 
 # ----------------------------------------------------------------------------------
@@ -769,12 +781,15 @@ remove() {
 
 # Remove a package folder from the local repo
 remove_pkgs() {
+    if [[ $REMOVE_PKG == false ]]; then
+        return 0
+    fi
     if [[ -z $1 ]]; then
         if [[ ${#TO_INSTALL[@]} -eq 0 ]]; then
             return 0
         fi
         for PKG in ${TO_INSTALL[@]}; do
-            remove_pkgs $1
+            rm -rf ${AURDIR}/$PKG
         done
     else
         if [[ -d ${AURDIR}/$1 ]]; then
