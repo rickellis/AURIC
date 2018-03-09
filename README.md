@@ -33,10 +33,7 @@ Should you use AURIC? If you are happy with your current package manager then pr
 
 ## Usage
 
-    $  auric -d  package-name  # Download a package
-
-    $  auric -i  package-name  # Install a package if it has been downloaded.
-                               # If local package does not exist it hands it off to auric -d
+    $  auric -i  package-name  # Download and install a package and its dependencies
 
     $  auric -u  package-name  # Check for updates on a specific package
     $  auric -u                # Check for updates on all packages
