@@ -292,7 +292,7 @@ install() {
         echo
         echo "Goodbye..."
     else
-        doinstall $PKG
+        do_install $PKG
     fi
     echo
 }
@@ -329,7 +329,7 @@ offer_to_install(){
         # This helps ensure that dependencies get installed first.
         # The order doesn't matter after updating, only downloading
         for (( i=${#TO_INSTALL[@]}-1 ; i>=0 ; i-- )) ; do
-            doinstall "${TO_INSTALL[i]}"
+            do_install "${TO_INSTALL[i]}"
         done
     fi
     echo
@@ -338,7 +338,7 @@ offer_to_install(){
 # ----------------------------------------------------------------------------------
 
 # Install a package
-doinstall() {
+do_install() {
     # Make sure we have a package name
     validate_pkgname "$1"
     local PKG
@@ -397,13 +397,14 @@ update() {
             # Extract the package name from the directory path
             DIR=${DIR//\//}
             DIR=${DIR//./}
-            doupdate $DIR
+            do_update $DIR
             cd ..
         done
     else
         echo
-        doupdate $1
+        do_update $1
     fi
+    echo
 
     # Offer to install the package updates
     offer_to_install
@@ -412,7 +413,7 @@ update() {
 # ----------------------------------------------------------------------------------
 
 # Perform the upddate routine
-doupdate() {
+do_update() {
     local PKG
     PKG=$1
 
@@ -474,7 +475,7 @@ doupdate() {
 # ----------------------------------------------------------------------------------
 
 # Verify that all dependencies for a remote AUR package are installed. 
-verifyrdep() {
+verify_rdep() {
     validate_pkgname "$1"
     local PKG
     PKG=$1
@@ -545,7 +546,7 @@ verifyrdep() {
 # Verify that all dependencies for a local AUR package are installed. This is a 
 # helper function that is useful to run prior to installing any new updates
 # in case a new package dependency was needed
-verifyldep() {
+verify_ldep() {
     validate_pkgname "$1"
     local depend
     local PKG
@@ -873,7 +874,7 @@ case "$CMD" in
     q)  query "$@" ;;
     r)  remove "$@" ;;
     m)  migrate "$@" ;;
-    vl) verifyldep "$@";;
-    vr) verifyrdep "$@";;
+    vl) verify_ldep "$@";;
+    vr) verify_rdep "$@";;
     h)  help ;;
 esac
