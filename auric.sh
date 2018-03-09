@@ -133,7 +133,7 @@ install() {
     DEPEND_HEADING=false
 
     # Perform the download
-    download "$1"
+    download "$@"
 
     # Offer to install the downloaded package(s)
     offer_to_install
@@ -149,116 +149,128 @@ download() {
     # Move into the AUR folder
     cd "$AURDIR" || exit
 
-    # Fetch the JSON data associated with the submitted package name
-    curl_result=$(curl -fsSk "${AUR_INFO_URL}${PKG}")
+    i=1
+    for PKG in $@; do
 
-    # Parse the result using the installed JSON parser
-    if [[ $JSON_PARSER == 'jq' ]]; then
-        json_result=$(echo "$curl_result" | jq -r '.results')
-    else
-        json_result=$(echo "$curl_result" | jshon -e results)
-    fi
-
-    # Did the package query return a valid result?
-    if [[ $json_result == "[]" ]]; then
-
-        # Presumably, if the user is migrating existing packages to AURIC
-        # all the dependencies will already be installed. We don't need
-        # to issue warnings in that case
-        if [[ $IS_MIGRATING == true ]]; then
-            return 0
-        fi
-
-        # If it's a non-AUR dependency we inform them that makepkg will deal with this
-        if [[ $IS_DEPEND == true ]]; then
-            echo -e "${yellow}MISSING: ${PKG} not in AUR. Makepkg will install it with pacman${reset}"
-        else
-            echo -e "${red}MISSING:${reset} ${PKG} is not in the AUR"
-            echo -e "${yellow}Use pacman to search in the offical Arch repoitories${reset}"
+        # This lets us show the "DEPENDENCY" heading for each package
+        # passed to the install function: auric -i pkg1 pkg1 pkg3
+        if (( $i%2 == 0 )); then
+            DEPEND_HEADING=false
             echo
         fi
-    else
+        ((i++))
 
-        # If a folder with the package name exists in the local repo we skip it
-        if [[ -d "$PKG" ]]; then
-            echo -e "${red}PKGSKIP:${reset} ${PKG} already exists in local repo"
-            return 0
-        fi
+        # Fetch the JSON data associated with the submitted package name
+        curl_result=$(curl -fsSk "${AUR_INFO_URL}${PKG}")
 
-        echo -e "${yellow}CLONING:${reset} $PKG"
-
-        # Assemble the git package URL
-        printf -v URL "$GIT_AUR_URL" "$PKG"
-
-        # Clone it
-        git clone $URL 2> /dev/null
-
-        # Was the clone successful?
-        if [[ "$?" -ne 0 ]]; then
-            echo -e "${red}FAILURE:${reset} Unable to clone. Git error code: ${?}"
-            return 0
-        fi
-
-        # Extra precaution: We make sure the package folder was created in the local repo
-        if [[ -d "$PKG" ]]; then
-            echo -e "${green}SUCCESS:${reset} ${cyan}${PKG} cloned${reset}"
-        else
-            echo -e "${red}PROBLEM:${reset} An unknown error occurred. ${PKG} not downloaded"
-            return 0
-        fi
-
-        # We don't bother with dependencies during migration since they'll already be installed
-        if [[ $IS_MIGRATING == true ]]; then
-            return 0
-        fi            
-
-        # Add the package to the install array
-        TO_INSTALL+=("$PKG")
-
-        # Get the package dependencies using installed json parser
+        # Parse the result using the installed JSON parser
         if [[ $JSON_PARSER == 'jq' ]]; then
-            has_depends=$(echo "$curl_result" | jq -r '.results[0].Depends') 
+            json_result=$(echo "$curl_result" | jq -r '.results')
         else
-            has_depends=$(echo "$curl_result" | jshon -e results -e 0 -e Depends)
+            json_result=$(echo "$curl_result" | jshon -e results)
         fi
 
-        # If there is a result, recurisvely call this function with the dependencies
-        if [[ $has_depends != "[]" ]] && [[ $has_depends != null ]]; then
+        # Did the package query return a valid result?
+        if [[ $json_result == "[]" ]]; then
 
-            if [[ $DEPEND_HEADING == false ]]; then
-                DEPEND_HEADING=true
-                echo
-                echo -e "DEPENDENCIES"
-                echo
+            # Presumably, if the user is migrating existing packages to AURIC
+            # all the dependencies will already be installed. We don't need
+            # to issue warnings in that case
+            if [[ $IS_MIGRATING == true ]]; then
+                continue
             fi
 
-            if [[ $JSON_PARSER == 'jq' ]]; then
-                dependencies=$(echo "$curl_result" | jq -r '.results[0].Depends[]') 
+            # If it's a non-AUR dependency we inform them that makepkg will deal with this
+            if [[ $IS_DEPEND == true ]]; then
+                echo -e "${orange}MISSING: ${PKG} not in AUR. Makepkg will install it with pacman${reset}"
             else
-                dependencies=$(echo "$curl_result" | jshon -e results -e 0 -e Depends -a -u)
+                echo -e "${red}MISSING:${reset} ${PKG} is not in the AUR"
+                echo -e "${yellow}Use pacman to search in the offical Arch repoitories${reset}"
+                echo
             fi
-    
-            # Run through the dependencies
-            for depend in $dependencies; do
+        else
 
-                # Remove everything after >= in $depend
-                # Some dependencies have minimum version requirements
-                # which screws up the package name
-                depend=$(echo $depend | sed "s/>=.*//")
+            # If a folder with the package name exists in the local repo we skip it
+            if [[ -d "$PKG" ]]; then
+                echo -e "${red}PKGSKIP:${reset} ${PKG} already exists in local repo"
+                continue
+            fi
 
-                # See if the dependency is already installed
-                pacman -Q $depend  >/dev/null 2>&1
+            echo -e "${yellow}CLONING: $PKG${reset}"
 
-                if [[ "$?" -eq 0 ]]; then
-                    echo -e "${green}PKGGOOD:${reset} ${depend} installed"
-                else
-                    IS_DEPEND=true
-                    download "$depend"
+            # Assemble the git package URL
+            printf -v URL "$GIT_AUR_URL" "$PKG"
+
+            # Clone it
+            git clone $URL 2> /dev/null
+
+            # Was the clone successful?
+            if [[ "$?" -ne 0 ]]; then
+                echo -e "${red}FAILURE:${reset} Unable to clone. Git error code: ${?}"
+                continue
+            fi
+
+            # Extra precaution: We make sure the package folder was created in the local repo
+            if [[ -d "$PKG" ]]; then
+                echo -e "${cyan}SUCCESS:${reset} ${cyan}${PKG} cloned${reset}"
+            else
+                echo -e "${red}PROBLEM:${reset} An unknown error occurred. ${PKG} not downloaded"
+                continue
+            fi
+
+            # We don't bother with dependencies during migration since they'll already be installed
+            if [[ $IS_MIGRATING == true ]]; then
+                continue
+            fi            
+
+            # Add the package to the install array
+            TO_INSTALL+=("$PKG")
+
+            # Get the package dependencies using installed json parser
+            if [[ $JSON_PARSER == 'jq' ]]; then
+                has_depends=$(echo "$curl_result" | jq -r '.results[0].Depends') 
+            else
+                has_depends=$(echo "$curl_result" | jshon -e results -e 0 -e Depends)
+            fi
+
+            # If there is a result, recurisvely call this function with the dependencies
+            if [[ $has_depends != "[]" ]] && [[ $has_depends != null ]]; then
+
+                if [[ $DEPEND_HEADING == false ]]; then
+                    DEPEND_HEADING=true
+                    echo
+                    echo -e "DEPENDENCIES"
+                    echo
                 fi
-                IS_DEPEND=false
-            done
+
+                if [[ $JSON_PARSER == 'jq' ]]; then
+                    dependencies=$(echo "$curl_result" | jq -r '.results[0].Depends[]') 
+                else
+                    dependencies=$(echo "$curl_result" | jshon -e results -e 0 -e Depends -a -u)
+                fi
+        
+                # Run through the dependencies
+                for depend in $dependencies; do
+
+                    # Remove everything after >= in $depend
+                    # Some dependencies have minimum version requirements
+                    # which screws up the package name
+                    depend=$(echo $depend | sed "s/>=.*//")
+
+                    # See if the dependency is already installed
+                    pacman -Q $depend  >/dev/null 2>&1
+
+                    if [[ "$?" -eq 0 ]]; then
+                        echo -e "${green}PKGGOOD:${reset} ${depend} installed"
+                    else
+                        IS_DEPEND=true
+                        download "$depend"
+                    fi
+                    IS_DEPEND=false
+                done
+            fi
         fi
-    fi
+    done
 }
 
 # ----------------------------------------------------------------------------------
