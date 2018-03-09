@@ -7,7 +7,7 @@
 #   AUR package manager
 #
 #-----------------------------------------------------------------------------------
-VERSION="1.3.0"
+VERSION="1.3.1"
 #-----------------------------------------------------------------------------------
 #
 # AURIC is a fork of vam with a pretty interface, SRCINFO version comparison,
@@ -129,7 +129,7 @@ install() {
     validate_pkgname "$1"
 
     # Set the heading flag to prevent multiple
-    # headings during download recursion
+    # "DEPENDENCY" headings during download recursion
     DEPEND_HEADING=false
 
     # Perform the download
@@ -154,6 +154,7 @@ download() {
 
         # This lets us show the "DEPENDENCY" heading for each package
         # passed to the install function: auric -i pkg1 pkg1 pkg3
+        # and suppress the heading during dependency recursion
         if (( $i%2 == 0 )); then
             DEPEND_HEADING=false
             echo
@@ -173,9 +174,8 @@ download() {
         # Did the package query return a valid result?
         if [[ $json_result == "[]" ]]; then
 
-            # Presumably, if the user is migrating existing packages to AURIC
-            # all the dependencies will already be installed. We don't need
-            # to issue warnings in that case
+            # Presumably if the user is migrating existing packages to AURIC
+            # all the dependencies will already be installed.
             if [[ $IS_MIGRATING == true ]]; then
                 continue
             fi
@@ -298,14 +298,11 @@ offer_to_install(){
     read -p "ENTER [Y/n] " CONSENT
 
     if [[ ! -z $CONSENT ]] && [[ ! $CONSENT =~ [y|Y] ]]; then
-        for PKG in ${TO_INSTALL[@]}; do
-            rm -rf ${AURDIR}/${PKG}
-        done
-        echo
+        # If they decline to install we remove the packages
+        remove_pkgs
     else
-        # Run through the install array in reverse order.
-        # This helps ensure that dependencies get installed first.
-        # The order doesn't matter after updating, only downloading
+        # Run through the install array in reverse order
+        # so that dependencies get installed first.
         for (( i=${#TO_INSTALL[@]}-1 ; i>=0 ; i-- )) ; do
             do_install "${TO_INSTALL[i]}"
         done
@@ -337,6 +334,7 @@ do_install() {
     read -p "Before installing, do you want to audit the PKGBUILD file? [Y/n] " AUDIT
 
     if [[ ! $AUDIT =~ [y|Y] ]] && [[ ! $AUDIT =~ [n|N] ]] && [[ ! -z $AUDIT ]]; then
+        remove_pkgs $PKG
         echo
         echo "Invalid entry. Aborting..."
         return 0
@@ -347,8 +345,7 @@ do_install() {
         echo
         read -p "Continue installing? [Y/n] " CONSENT
         if [[ ! -z $CONSENT ]] && [[ ! $CONSENT =~ [y|Y] ]]; then
-            echo
-            echo "Goodbye..."
+            remove_pkgs $PKG
             return 0
          fi
     fi
@@ -412,6 +409,7 @@ do_update() {
     # No version number? Package isn't installed
     if [[ "$?" -ne 0 ]]; then
         echo -e "${red}ERROR:${reset} ${PKG} is not installed"
+        remove_pkgs $PKG
         return 1
     fi
 
@@ -757,7 +755,7 @@ remove() {
 
     if [[ $CONSENT =~ [y|Y] ]]; then
         sudo pacman -Rsc $PKG --noconfirm
-        rm -rf ${AURDIR}/${PKG}
+        remove_pkgs $PKG
         echo
         echo -e "${red}REMOVED:${reset} ${PKG}"
     else
@@ -765,6 +763,24 @@ remove() {
         echo "Goodbye..."
     fi
     echo
+}
+
+# ----------------------------------------------------------------------------------
+
+# Remove a package folder from the local repo
+remove_pkgs() {
+    if [[ -z $1 ]]; then
+        if [[ ${#TO_INSTALL[@]} -eq 0 ]]; then
+            return 0
+        fi
+        for PKG in ${TO_INSTALL[@]}; do
+            remove_pkgs $1
+        done
+    else
+        if [[ -d ${AURDIR}/$1 ]]; then
+            rm -rf ${AURDIR}/$1
+        fi
+    fi
 }
 
 # ----------------------------------------------------------------------------------
