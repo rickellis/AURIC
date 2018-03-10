@@ -1,5 +1,5 @@
 # AURIC
-Minimalist Arch User Repository package manager based on vam.
+Arch User Repository package manager based on vam.
 
 <img src="https://i.imgur.com/qCp2nLZ.png" />
 
