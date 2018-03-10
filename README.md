@@ -23,7 +23,7 @@ After the AUR moved everything to github the process got simpler: You could use 
 
 AURIC started life as my desire to write a shell script that automates the above process, including the dependency management. When I stumbled onto vam I realized that someone else had a similar idea and had written the core functionality. At a mere 56 lines of code, however, that script is extremely lean. It only handles package and dependency downloading, and runs a git pull to check for updates. I took vam and built it into AURIC.
 
-The way it works is this: AURIC creates a hidden folder in your home directory called .AUR in which it stores git clones of your AUR packages. When you tell AURIC to check for updates it does a `git pull` for each of the packages, and then compares the installed version to the new version's `SRCINFO` file. If the new version number is greater, it informs you that `makepkg` should be run and offers to do it for you.
+The way it works is this: AURIC creates a hidden folder in your home directory called .AUR in which it stores git clones of your AUR packages. When you tell AURIC to check for updates it does a `git pull` for each of the packages, and then compares your installed version to the new version's `SRCINFO` file. If the new version number is greater, it informs you that `makepkg` should be run and offers to do it for you.
 
 The one major downside to using a `git pull` to determine if a package is out of date is this: You can only do a git pull once. Since the pull updates your local repo, subsequent pulls will show the package as being current, even if you didn't actually run `makepkg`. In other words, you might have applications that are out of date even though git thinks you are current.
 
