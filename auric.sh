@@ -449,7 +449,7 @@ do_update() {
     fi
 
     if [[ $(vercmp $new_pkgver $local_pkgver) -eq 1 ]]; then
-        echo -e "${yellow}NEW VERSION: ${PKG} ${pkgver}. Build files downloaded.${reset}" 
+        echo -e "${yellow}*UPDATE: ${PKG} ${pkgver}. Build files downloaded.${reset}" 
         TO_INSTALL+=("$PKG")
     else
         echo -e "${green}CURRENT:${reset} ${PKG} is up to date"
