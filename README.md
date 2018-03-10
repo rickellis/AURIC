@@ -19,7 +19,7 @@ So how do you install packages manually? The classic way, prior to AUR moving to
 
 The process wasn't that hard, but it did require keeping track of version numbers so you could periodically check the AUR site for version updates, along with managing AUR dependencies. If you had only a few AUR packages installed it was no big deal, but as your software stash grew it could get cumbersome. This is where a package manager comes in. It does all that for you.
 
-After the AUR moved everything to github the process got simpler: You could use `git clone` to keep local repos with your AUR packages. To check for updates, instead of looking up version numbers, you run a `git pull`. If the pull is already up to date there's nothing to do. If the pull results in changes you run `makepkg`. Definitely easier, but you still had to manage AUR dependencies.
+After the AUR moved everything to github the process got simpler: You could use `git clone` to keep local repos with your AUR packages. To check for updates, instead of looking up version numbers, you run a `git pull`. If the pull is already up to date there's nothing to do. If the pull results in changes you run `makepkg` on the new `PKGBUILD` that got downloaded when you pulled. Definitely easier, but you still had to manage AUR dependencies.
 
 AURIC started life as my desire to write a shell script that automates the above process, including the dependency management. When I stumbled onto vam I realized that someone else had a similar idea and had written the core functionality. At a mere 55 lines of code, however, that script is extremely lean. It only handles package and dependency downloading, and runs a git pull to check for updates. I took vam and built it into AURIC.
 
