@@ -25,10 +25,9 @@ AURIC started life as my desire to write a shell script that automates the above
 
 The one major downside to using a `git pull` to determine if a package is out of date is this: You can only do a git pull once. Since the pull updates your local repo, subsequent pulls will show the package as being current, even if you didn't actually run `makepkg`. In other words, you might have applications that are out of date even though git thinks you are current.
 
-So more reliable version comparison was one thing I wanted to solve in AURIC. I did that by using the `SRCINFO` file data and comparing it to the installed version number returned by pacman. That way, regardless of whether your git repo is current you'll be informed that you need to update. I also wanted AURIC to handle the package installation (and with that, `PKGBUILD` auditing). Along the way I added much more thorough error handling, package dependency verification, automated migration of currently installed packages to AURIC, colored keyword search results, and support for jq and jshon.
+So more reliable version comparison was one thing I wanted to solve in AURIC. I did that by using the `SRCINFO` file data and comparing it to the installed version number returned by pacman. That way you'll always be accurately informed when you need to update. I also wanted AURIC to handle the package installation (and with that, `PKGBUILD` auditing). Along the way I added much more thorough error handling, package dependency verification, automated migration of currently installed packages to AURIC, colored keyword search results, and support for jq and jshon.
 
 The way it works is this: AURIC creates a hidden folder in your home directory called .AUR in which it stores git clones of your AUR packages. When you tell AURIC to check for updates it does a `git pull` for each of the packages, and then compares your installed version to the new version's `SRCINFO` file. If the new version number is greater, it informs you that `makepkg` should be run and offers to do it for you.
-
 
 Should you use AURIC? If you are happy with your current package manager then probably not. If you are looking for a simple tool that helps automate the tasks you are already comfortable doing then you might give it a try.
 
