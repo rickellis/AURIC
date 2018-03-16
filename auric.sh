@@ -154,12 +154,12 @@ download() {
     cd "$AURDIR" || exit
 
     i=1
-    for PKG in $@; do
+    for PKG in "$@"; do
 
         # This lets us show the "DEPENDENCY" heading for each package
         # passed to the install function: auric -i pkg1 pkg1 pkg3
         # and suppress the heading during dependency recursion
-        if (( $i%2 == 0 )); then
+        if (( i%2 == 0 )); then
             DEPEND_HEADING=false
             echo
         fi
@@ -206,7 +206,7 @@ download() {
             printf -v URL "$GIT_AUR_URL" "$PKG"
 
             # Clone it
-            git clone $URL 2> /dev/null
+            git clone "$URL" 2> /dev/null
 
             # Was the clone successful?
             if [[ "$?" -ne 0 ]]; then
@@ -338,7 +338,7 @@ do_install() {
     read -p "Before installing, do you want to audit the PKGBUILD file? [Y/n] " AUDIT
 
     if [[ ! $AUDIT =~ [y|Y] ]] && [[ ! $AUDIT =~ [n|N] ]] && [[ ! -z $AUDIT ]]; then
-        remove_pkgs $PKG
+        remove_pkgs "$PKG"
         echo
         echo "Invalid entry. Aborting..."
         return 0
@@ -788,7 +788,7 @@ remove_pkgs() {
         if [[ ${#TO_INSTALL[@]} -eq 0 ]]; then
             return 0
         fi
-        for PKG in ${TO_INSTALL[@]}; do
+        for PKG in "${TO_INSTALL[@]}"; do
             rm -rf ${AURDIR}/$PKG
         done
     else
