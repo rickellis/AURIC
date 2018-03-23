@@ -33,6 +33,8 @@ Should you use AURIC? If you are happy with your current package manager then pr
 
 ## Usage
 
+Note: If you currently have installed packages from the AUR, make sure to run `auric -m` first so it can create your local .AUR repo.
+
     $  auric -i  package-name  # Download and install a package and its dependencies
 
     $  auric -u  package-name  # Check for updates on a specific package
